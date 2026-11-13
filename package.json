@@ -1,6 +1,6 @@
 {
   "name": "dsh-peerweave",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "Peerweave: encrypted peer-to-peer links between DeepSeek Harness instances with password-guarded, tiered access.",
@@ -30,12 +30,16 @@
   "files": [
     "index.js",
     "client.js",
+    "relay.js",
     "cordis.patch.yml",
     "lib/*.js",
     "locale/*.json",
     "icon.svg",
     "README.md"
   ],
+  "bin": {
+    "dsh-peerweave-relay": "./relay.js"
+  },
   "engines": {
     "node": ">=20"
   },

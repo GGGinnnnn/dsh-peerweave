@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Peerweave",
-    "description": "Link DSH instances on other computers over an encrypted peer network, with password-guarded tiers for viewing workspace history, reading files, and chatting with the local agent."
+    "description": "Link DSH instances across computers or the internet over an encrypted peer network, with password-guarded tiers for viewing workspace history, reading files, and chatting with the local agent. Supports custom dial addresses, reverse SSH, a built-in relay, IPv6, and Tailscale/ZeroTier overlays."
   }
 }

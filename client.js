@@ -44,7 +44,7 @@ window.__ModuleLoader__.load({
       'common.time': 'Time',
       'common.refresh': 'Refresh',
       'setup.title': 'Create the Peerweave password',
-      'setup.intro': 'Peerweave encrypts the link and seals this machine\\u2019s identity key with a password. Set the password now; every permission change asks for it again.',
+      'setup.intro': 'Peerweave encrypts the link and seals this machine’s identity key with a password. Set the password now; every permission change asks for it again.',
       'setup.password': 'New password (at least 8 characters)',
       'setup.confirm': 'Repeat the password',
       'setup.displayName': 'Display name (optional)',
@@ -85,7 +85,7 @@ window.__ModuleLoader__.load({
       'grant.warning':
         'Tier 3 gives the remote peer control over a DSH agent on this computer. That agent can read files, run commands and use every tool this workspace allows. Only grant this to someone you fully trust, and confirm only after the 10-second delay.',
       'invite.title': 'Invites',
-      'invite.intro': 'An invite code carries this machine\\u2019s address, fingerprint and a single-use pairing secret. Send it over a channel you trust.',
+      'invite.intro': 'An invite code carries this machine’s address, fingerprint and a single-use pairing secret. Send it over a channel you trust.',
       'invite.create': 'Create invite code',
       'invite.created': 'Invite created. It expires in 10 minutes and works once.',
       'invite.join': 'Join another DSH',
@@ -97,11 +97,48 @@ window.__ModuleLoader__.load({
       'settings.title': 'Sharing settings',
       'settings.maxFile': 'Largest file others may read (MiB)',
       'settings.maxFileHint': 'Applies to every peer with tier 2 or higher. Hard cap: 2048 MiB (2 GiB).',
+      'net.title': 'Cross-network access',
+      'net.intro': 'Reach peers outside the LAN with a custom dial address, reverse SSH, a relay, or a VPN overlay. The link stays end-to-end encrypted in every mode.',
+      'net.bindHost': 'Listen address',
+      'net.bindV4': 'IPv4 only (0.0.0.0)',
+      'net.bindV6': 'IPv6 + IPv4 dual-stack (::)',
+      'net.bindHint': 'Dual-stack lets IPv6 peers connect; the invite address still comes from “Address peers should dial”.',
+      'net.reverse': 'Reverse SSH (this machine behind NAT)',
+      'net.reverseEnable': 'Run an outbound ssh -R tunnel to a VPS',
+      'net.reverseTarget': 'SSH target (user@vps)',
+      'net.reverseBindPort': 'Public port on the VPS',
+      'net.reverseExtra': 'Extra ssh arguments (optional)',
+      'net.reverseHint': 'The VPS sshd needs GatewayPorts clientspecified (or yes) so the forwarded port is reachable. Set “Address peers should dial” to the VPS host; direct invites then advertise the VPS port.',
+      'net.relayClient': 'Relay client (for relay invites)',
+      'net.relayHost': 'Relay host',
+      'net.relayPort': 'Relay port',
+      'net.relayToken': 'Relay token (optional)',
+      'net.relayClientHint': 'Both sides connect outbound to this relay; no port forwarding is needed. Create the invite with mode “Relay”.',
+      'net.relayServer': 'Relay server (run here)',
+      'net.relayServerEnable': 'Run the relay listener on this machine',
+      'net.relayServerHint': 'Usually this belongs on a public VPS; you can also run the stand-alone relay.js there instead.',
+      'net.running': 'running',
+      'net.stopped': 'stopped',
+      'net.save': 'Save cross-network settings',
+      'net.saved': 'Cross-network settings saved.',
+      'net.guide': 'Overlay network guide (Tailscale / ZeroTier)',
+      'net.guideHint': 'Easiest option when both machines are far apart or behind CGNAT: no port forwarding, no relay to operate.',
+      'net.tailscaleGuide': 'Tailscale\n1. Install Tailscale on both computers and sign in to the same account (same tailnet).\n2. Confirm both devices are online and note A’s 100.x.y.z address or MagicDNS name.\n3. On A: Settings → Peerweave → “Address peers should dial” = that address; create a direct invite.\n4. On B: join the invite. No port forwarding is needed.\n5. If a direct path is blocked it falls back to Tailscale DERP relays; Peerweave still encrypts end to end.\n6. Use Tailscale ACLs/tags to limit which devices may reach A.',
+      'net.zerotierGuide': 'ZeroTier\n1. Create a ZeroTier network and join both computers; authorize both members.\n2. Note A’s Managed IP.\n3. On A: “Address peers should dial” = that Managed IP; create a direct invite.\n4. On B: join the invite. No port forwarding is needed.\n5. Keep the network private; the Managed IP is only reachable by authorized members.',
+      'invite.mode': 'Invite mode',
+      'invite.modeDirect': 'Direct / reverse SSH',
+      'invite.modeRelay': 'Relay (NAT to NAT)',
+      'invite.modeRelayHint': 'Set the relay client above first. Both sides dial the relay; no reachable port is required on either peer.',
+      'invite.dialHost': 'Custom dial host (optional)',
+      'invite.dialPort': 'Custom dial port (optional)',
+      'invite.dialHint': 'Overrides the address inside the invite. Useful for ngrok, frp, reverse SSH, or a port-forward that uses a different port.',
+      'peers.relay': 'Relay',
+      'peers.relayRole': 'role',
       'files.tooLarge': 'The file exceeds the sharing limit set by the peer.',
       'files.tooLargePreview': 'The file is too large for an inline preview. Copy it to your workspace instead.',
       'settings.listenPort': 'Listen port',
       'settings.sharedRoot': 'Shared workspace root',
-      'settings.sharedRootHint': 'Leave empty to share this profile\\u2019s default workspace.',
+      'settings.sharedRootHint': 'Leave empty to share this profile’s default workspace.',
       'settings.autoConnect': 'Reconnect known peers automatically',
       'settings.displayName': 'Display name',
       'settings.advertiseHost': 'Address peers should dial',
@@ -227,6 +264,43 @@ window.__ModuleLoader__.load({
       'settings.title': '共享设置',
       'settings.maxFile': '允许对方读取的单文件上限（MiB）',
       'settings.maxFileHint': '适用于所有获得第二档及以上权限的节点。硬上限 2048 MiB（2 GiB）。',
+      'net.title': '跨公网连接',
+      'net.intro': '通过自定义拨号地址、反向 SSH、中继或 VPN 组网连接局域网之外的节点；所有模式都保持端到端加密。',
+      'net.bindHost': '监听地址',
+      'net.bindV4': '仅 IPv4（0.0.0.0）',
+      'net.bindV6': 'IPv6 + IPv4 双栈（::）',
+      'net.bindHint': '双栈允许 IPv6 节点直连；邀请码里的地址仍来自“供对方连接的地址”。',
+      'net.reverse': '反向 SSH（本机在 NAT 后）',
+      'net.reverseEnable': '主动向 VPS 建立 ssh -R 隧道',
+      'net.reverseTarget': 'SSH 目标（user@vps）',
+      'net.reverseBindPort': 'VPS 上对外暴露的端口',
+      'net.reverseExtra': '额外 ssh 参数（可选）',
+      'net.reverseHint': 'VPS 的 sshd 需要 GatewayPorts clientspecified（或 yes），否则转发端口只在 VPS 回环可访问。把“供对方连接的地址”设为 VPS 地址；直连邀请码会自动使用 VPS 端口。',
+      'net.relayClient': '中继客户端（生成中继邀请码）',
+      'net.relayHost': '中继服务器地址',
+      'net.relayPort': '中继端口',
+      'net.relayToken': '中继 token（可选）',
+      'net.relayClientHint': '两端都主动连这个中继，双方都不需要端口映射。创建邀请码时选择“中继”。',
+      'net.relayServer': '中继服务（在本机运行）',
+      'net.relayServerEnable': '在本机启动中继监听',
+      'net.relayServerHint': '通常应部署在公网 VPS；也可以直接在 VPS 上运行独立的 relay.js。',
+      'net.running': '运行中',
+      'net.stopped': '未运行',
+      'net.save': '保存跨网设置',
+      'net.saved': '跨网设置已保存。',
+      'net.guide': '组网教程（Tailscale / ZeroTier）',
+      'net.guideHint': '两台机器离得很远或在 CGNAT 后时最省事：不需要端口映射，也不需要自己维护中继。',
+      'net.tailscaleGuide': 'Tailscale\n1. 两台电脑都安装 Tailscale，并登录同一账号（同一 tailnet）。\n2. 在管理台确认两台设备在线，记下 A 的 100.x.y.z 地址或 MagicDNS 名称。\n3. 在 A：设置 → Peerweave → “供对方连接的地址”填该地址；创建“直连”邀请码。\n4. 在 B：加入邀请码。不需要任何端口映射。\n5. 直连不通时会自动走 Tailscale DERP 中继；Peerweave 仍然端到端加密。\n6. 建议用 Tailscale ACL/tag 限制哪些设备可以访问 A。',
+      'net.zerotierGuide': 'ZeroTier\n1. 创建 ZeroTier Network，两台电脑加入并授权。\n2. 记下 A 的 Managed IP。\n3. 在 A：“供对方连接的地址”填该 Managed IP；创建“直连”邀请码。\n4. 在 B：加入邀请码。不需要端口映射。\n5. 保持网络私有；Managed IP 只有被授权的成员能访问。',
+      'invite.mode': '邀请方式',
+      'invite.modeDirect': '直连 / 反向 SSH',
+      'invite.modeRelay': '中继（NAT 到 NAT）',
+      'invite.modeRelayHint': '请先配置上方的中继客户端。双方都主动连中继，不需要任何一端有可达端口。',
+      'invite.dialHost': '自定义拨号地址（可选）',
+      'invite.dialPort': '自定义拨号端口（可选）',
+      'invite.dialHint': '覆盖邀请码内的地址，适用于 ngrok、frp、反向 SSH 或端口映射后端口不一致的情况。',
+      'peers.relay': '中继',
+      'peers.relayRole': '角色',
       'files.tooLarge': '文件超过对方设置的共享大小上限。',
       'files.tooLargePreview': '文件太大，无法内联预览。请使用「复制到我的工作区」传输。',
       'settings.listenPort': '监听端口',
@@ -430,6 +504,9 @@ window.__ModuleLoader__.load({
       '.pwv-msg.user{align-self:flex-end;background:var(--dsw-alias-bg-layer-2)}',
       '.pwv-msg.assistant{align-self:flex-start;border:1px solid var(--dsw-alias-border-l1)}',
       '.pwv-msg.error{align-self:stretch;color:var(--dsw-alias-state-error-primary);border:1px solid var(--dsw-alias-state-error-primary)}',
+      '.pwv-guide{margin-top:12px;border-top:1px solid var(--dsw-alias-border-l1);padding-top:8px}',
+      '.pwv-guide summary{cursor:pointer;font-size:12px;color:var(--dsw-alias-label-secondary)}',
+      '.pwv-guide-body{white-space:pre-line;font-size:12px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);border-radius:8px;padding:8px;margin-top:6px;line-height:1.5}',
     ].join('')
 
     function Styles() {
@@ -1126,7 +1203,7 @@ window.__ModuleLoader__.load({
           peer.remoteTier >= 3 ? h('span', { className: 'pwv-danger-badge' }, t('tier.3')) : null),
         h('div', { className: 'pwv-muted pwv-mono' }, `${t('peers.fingerprint')}: ${peer.fingerprint}`),
         h('div', { className: 'pwv-muted' },
-          `${t('peers.transport')}: ${peer.transport === 'ssh' ? `ssh ${peer.sshTarget || ''}` : 'TCP'} · ${peer.host || '—'}${peer.port ? ':' + peer.port : ''} · ${t('peers.lastSeen')}: ${formatTime(peer.lastSeenAt)}`),
+          `${t('peers.transport')}: ${peer.endpoint || peer.transport}${peer.relay ? ` · ${t('peers.relayRole')}: ${peer.relay.role}` : ''} · ${t('peers.lastSeen')}: ${formatTime(peer.lastSeenAt)}`),
         h('div', { className: 'pwv-muted' }, `${t('peers.grantedToMe')}: ${peer.remoteTier >= 0 ? t(`tier.${peer.remoteTier}`) : t('tier.unknown')}${peer.remoteSharedLabel ? ` · ${peer.remoteSharedLabel}` : ''}`),
         h(GrantEditor, { t, peer, onChanged }),
         h('div', { className: 'pwv-sep' }),
@@ -1156,10 +1233,13 @@ window.__ModuleLoader__.load({
       const [error, setError] = useState('')
       const [invite, setInvite] = useState(null)
       const [copied, setCopied] = useState(false)
+      const [mode, setMode] = useState('direct')
       const [code, setCode] = useState('')
       const [transport, setTransport] = useState('tcp')
       const [sshTarget, setSshTarget] = useState('')
       const [sshPort, setSshPort] = useState('')
+      const [dialHost, setDialHost] = useState('')
+      const [dialPort, setDialPort] = useState('')
       const [joinBusy, setJoinBusy] = useState(false)
       const [joinError, setJoinError] = useState('')
 
@@ -1168,7 +1248,7 @@ window.__ModuleLoader__.load({
         setBusy(true)
         setError('')
         try {
-          setInvite(await post('invite/create', { password }))
+          setInvite(await post('invite/create', { password, mode }))
           setPassword('')
         } catch (failure) {
           setError(errorLabel(t, failure))
@@ -1187,10 +1267,14 @@ window.__ModuleLoader__.load({
             transport,
             sshTarget: sshTarget.trim(),
             sshRemotePort: Number(sshPort) || undefined,
+            dialHost: dialHost.trim() || undefined,
+            dialPort: Number(dialPort) || undefined,
           })
           setCode('')
           setSshTarget('')
           setSshPort('')
+          setDialHost('')
+          setDialPort('')
           if (onChanged) onChanged()
         } catch (failure) {
           setJoinError(errorLabel(t, failure))
@@ -1203,12 +1287,27 @@ window.__ModuleLoader__.load({
         h('div', { className: 'pwv-h' }, t('invite.title')),
         h('div', { className: 'pwv-sub' }, t('invite.intro')),
         h('div', { className: 'pwv-row' },
+          h('span', { className: 'pwv-label' }, t('invite.mode')),
+          h('select', {
+            className: 'pwv-input',
+            value: mode,
+            onChange: (event) => setMode(event.target.value),
+          },
+          h('option', { value: 'direct' }, t('invite.modeDirect')),
+          h('option', { value: 'relay' }, t('invite.modeRelay')))),
+        mode === 'relay'
+          ? h('div', { className: 'pwv-muted' },
+            state.relayClient && state.relayClient.host
+              ? `${t('invite.modeRelayHint')} ${state.relayClient.host}:${state.relayClient.port}`
+              : t('invite.modeRelayHint'))
+          : null,
+        h('div', { className: 'pwv-row' },
           h('div', { className: 'pwv-grow' }, h(Input, { value: password, onChange: setPassword, type: 'password', placeholder: t('common.password') })),
           h(Btn, { primary: true, onClick: create, disabled: busy || !password }, busy ? t('common.loading') : t('invite.create'))),
         h(ErrorLine, { text: error }),
         invite
           ? h('div', { className: 'pwv-col', style: { marginTop: 6 } },
-            h('span', { className: 'pwv-muted' }, `${t('invite.created')} ${t('settings.advertiseHost')}: ${invite.host}:${invite.port}`),
+            h('span', { className: 'pwv-muted' }, `${t('invite.created')} ${invite.mode === 'relay' ? t('peers.relay') : t('settings.advertiseHost')}: ${invite.host}:${invite.port}`),
             h('div', { className: 'pwv-code' }, invite.code),
             h('div', { className: 'pwv-row' },
               h(Btn, { onClick: () => { setCopied(copyText(invite.code)); setTimeout(() => setCopied(false), 1500) } }, copied ? t('common.copied') : t('common.copy'))))
@@ -1233,6 +1332,10 @@ window.__ModuleLoader__.load({
               h('div', { className: 'pwv-grow' }, h(Input, { value: sshTarget, onChange: setSshTarget, placeholder: t('invite.sshTarget') })),
               h('div', { style: { width: 150 } }, h(Input, { value: sshPort, onChange: setSshPort, placeholder: t('invite.sshPort') })))
             : null,
+          h('div', { className: 'pwv-row' },
+            h('div', { className: 'pwv-grow' }, h(Input, { value: dialHost, onChange: setDialHost, placeholder: t('invite.dialHost') })),
+            h('div', { style: { width: 150 } }, h(Input, { value: dialPort, onChange: setDialPort, placeholder: t('invite.dialPort') }))),
+          h('div', { className: 'pwv-muted' }, t('invite.dialHint')),
           h(ErrorLine, { text: joinError }),
           h('div', { className: 'pwv-row' }, h(Btn, { onClick: join, disabled: joinBusy || !code.trim() }, joinBusy ? t('common.loading') : t('invite.joinSubmit')))))
     }
@@ -1244,6 +1347,7 @@ window.__ModuleLoader__.load({
       const [displayName, setDisplayName] = useState(state.settings.displayName || '')
       const [advertiseHost, setAdvertiseHost] = useState(state.settings.advertiseHost || '')
       const [autoConnect, setAutoConnect] = useState(Boolean(state.settings.autoConnect))
+      const [bindHost, setBindHost] = useState(state.settings.bindHost || '0.0.0.0')
       const [password, setPassword] = useState('')
       const [busy, setBusy] = useState(false)
       const [error, setError] = useState('')
@@ -1264,6 +1368,7 @@ window.__ModuleLoader__.load({
             patch: {
               maxFileBytes: bytes,
               listenPort: Number(listenPort),
+              bindHost,
               sharedRoot: sharedRoot.trim(),
               displayName: displayName.trim(),
               advertiseHost: advertiseHost.trim(),
@@ -1289,12 +1394,132 @@ window.__ModuleLoader__.load({
         h('div', { className: 'pwv-row' },
           h(Field, { label: t('settings.displayName') }, h(Input, { value: displayName, onChange: setDisplayName })),
           h(Field, { label: t('settings.advertiseHost'), hint: t('settings.advertiseHostHint') }, h(Input, { value: advertiseHost, onChange: setAdvertiseHost }))),
+        h(Field, { label: t('net.bindHost'), hint: t('net.bindHint') },
+          h('select', { className: 'pwv-input', value: bindHost, onChange: (event) => setBindHost(event.target.value) },
+            h('option', { value: '0.0.0.0' }, t('net.bindV4')),
+            h('option', { value: '::' }, t('net.bindV6')))),
         h('label', { className: 'pwv-muted' }, h('input', { type: 'checkbox', checked: autoConnect, onChange: (event) => setAutoConnect(event.target.checked) }), ` ${t('settings.autoConnect')}`),
         h('div', { className: 'pwv-row', style: { marginTop: 6 } },
           h('div', { className: 'pwv-grow' }, h(Input, { value: password, onChange: setPassword, type: 'password', placeholder: t('common.password') })),
           h(Btn, { primary: true, onClick: save, disabled: busy }, busy ? t('common.loading') : t('common.save'))),
         h(ErrorLine, { text: error }),
         h(OkLine, { text: ok }))
+    }
+
+    function CrossNetSettings({ t, state, full, onChanged }) {
+      const [reverse, setReverse] = useState(full ? { ...full.reverseSsh } : { enabled: false, target: '', bindPort: 0, extraArgs: '' })
+      const [relayClient, setRelayClient] = useState(full ? { ...full.relayClient } : { host: '', port: 41338, token: '' })
+      const [relayServer, setRelayServer] = useState(full ? { ...full.relayServer } : { enabled: false, port: 41338, token: '' })
+      const [password, setPassword] = useState('')
+      const [busy, setBusy] = useState(false)
+      const [error, setError] = useState('')
+      const [ok, setOk] = useState('')
+
+      useEffect(() => {
+        if (!full) return
+        setReverse({ ...full.reverseSsh })
+        setRelayClient({ ...full.relayClient })
+        setRelayServer({ ...full.relayServer })
+      }, [full])
+
+      async function save() {
+        if (!password) {
+          setError(t('grant.needsPassword'))
+          return
+        }
+        setBusy(true)
+        setError('')
+        setOk('')
+        try {
+          await post('settings/update', {
+            password,
+            patch: {
+              reverseSsh: {
+                enabled: Boolean(reverse.enabled),
+                target: String(reverse.target || '').trim(),
+                bindPort: Number(reverse.bindPort) || 0,
+                extraArgs: String(reverse.extraArgs || ''),
+              },
+              relayClient: {
+                host: String(relayClient.host || '').trim(),
+                port: Number(relayClient.port) || 41338,
+                token: String(relayClient.token || ''),
+              },
+              relayServer: {
+                enabled: Boolean(relayServer.enabled),
+                port: Number(relayServer.port) || 41338,
+                token: String(relayServer.token || ''),
+              },
+            },
+          })
+          setPassword('')
+          setOk(t('net.saved'))
+          if (onChanged) onChanged()
+        } catch (failure) {
+          setError(errorLabel(t, failure))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      const reverseStatus = state.reverseSsh
+        ? `${state.reverseSsh.enabled ? (state.reverseSsh.running ? t('net.running') : t('net.stopped')) : t('common.none')}${state.reverseSsh.error ? ` · ${state.reverseSsh.error}` : ''}`
+        : ''
+      const relayStatus = state.relayServer
+        ? `${state.relayServer.enabled ? (state.relayServer.running ? t('net.running') : t('net.stopped')) : t('common.none')}${state.relayServer.error ? ` · ${state.relayServer.error}` : ''}`
+        : ''
+
+      return h('div', { className: 'pwv-card' },
+        h('div', { className: 'pwv-h' }, t('net.title')),
+        h('div', { className: 'pwv-sub' }, t('net.intro')),
+        full ? null : h('div', { className: 'pwv-muted' }, t('common.loading')),
+
+        h('div', { className: 'pwv-h' }, t('net.reverse')),
+        h('label', { className: 'pwv-muted' },
+          h('input', {
+            type: 'checkbox',
+            checked: Boolean(reverse.enabled),
+            onChange: (event) => setReverse({ ...reverse, enabled: event.target.checked }),
+          }), ` ${t('net.reverseEnable')}`),
+        h('div', { className: 'pwv-row' },
+          h('div', { className: 'pwv-grow' }, h(Input, { value: reverse.target, onChange: (value) => setReverse({ ...reverse, target: value }), placeholder: t('net.reverseTarget') })),
+          h('div', { style: { width: 160 } }, h(Input, { value: String(reverse.bindPort || ''), onChange: (value) => setReverse({ ...reverse, bindPort: value }), type: 'number', placeholder: t('net.reverseBindPort') }))),
+        h('div', { className: 'pwv-row' },
+          h('div', { className: 'pwv-grow' }, h(Input, { value: reverse.extraArgs, onChange: (value) => setReverse({ ...reverse, extraArgs: value }), placeholder: t('net.reverseExtra') }))),
+        h('div', { className: 'pwv-muted' }, t('net.reverseHint')),
+        h('div', { className: 'pwv-muted' }, reverseStatus),
+
+        h('div', { className: 'pwv-h' }, t('net.relayClient')),
+        h('div', { className: 'pwv-row' },
+          h('div', { className: 'pwv-grow' }, h(Input, { value: relayClient.host, onChange: (value) => setRelayClient({ ...relayClient, host: value }), placeholder: t('net.relayHost') })),
+          h('div', { style: { width: 150 } }, h(Input, { value: String(relayClient.port || ''), onChange: (value) => setRelayClient({ ...relayClient, port: value }), type: 'number', placeholder: t('net.relayPort') })),
+          h('div', { className: 'pwv-grow' }, h(Input, { value: relayClient.token, onChange: (value) => setRelayClient({ ...relayClient, token: value }), type: 'password', placeholder: t('net.relayToken') }))),
+        h('div', { className: 'pwv-muted' }, t('net.relayClientHint')),
+
+        h('div', { className: 'pwv-h' }, t('net.relayServer')),
+        h('label', { className: 'pwv-muted' },
+          h('input', {
+            type: 'checkbox',
+            checked: Boolean(relayServer.enabled),
+            onChange: (event) => setRelayServer({ ...relayServer, enabled: event.target.checked }),
+          }), ` ${t('net.relayServerEnable')}`),
+        h('div', { className: 'pwv-row' },
+          h('div', { style: { width: 150 } }, h(Input, { value: String(relayServer.port || ''), onChange: (value) => setRelayServer({ ...relayServer, port: value }), type: 'number', placeholder: t('net.relayPort') })),
+          h('div', { className: 'pwv-grow' }, h(Input, { value: relayServer.token, onChange: (value) => setRelayServer({ ...relayServer, token: value }), type: 'password', placeholder: t('net.relayToken') }))),
+        h('div', { className: 'pwv-muted' }, t('net.relayServerHint')),
+        h('div', { className: 'pwv-muted' }, relayStatus),
+
+        h('div', { className: 'pwv-row', style: { marginTop: 8 } },
+          h('div', { className: 'pwv-grow' }, h(Input, { value: password, onChange: setPassword, type: 'password', placeholder: t('common.password') })),
+          h(Btn, { primary: true, onClick: save, disabled: busy || !full }, busy ? t('common.loading') : t('net.save'))),
+        h(ErrorLine, { text: error }),
+        h(OkLine, { text: ok }),
+
+        h('details', { className: 'pwv-guide' },
+          h('summary', null, t('net.guide')),
+          h('div', { className: 'pwv-muted', style: { whiteSpace: 'pre-line', marginTop: 6 } }, t('net.guideHint')),
+          h('div', { className: 'pwv-guide-body' }, t('net.tailscaleGuide')),
+          h('div', { className: 'pwv-guide-body' }, t('net.zerotierGuide'))))
     }
 
     function PasswordSection({ t }) {
@@ -1391,6 +1616,26 @@ window.__ModuleLoader__.load({
       const t = useT(ctx)
       const current = useSession()
       const { state, error, reload } = usePublic(true, 3000)
+      const [full, setFull] = useState(null)
+      const loadFull = useCallback(async () => {
+        if (!current.token) {
+          setFull(null)
+          return
+        }
+        try {
+          setFull(await post('settings/read', {}))
+        } catch {
+          setFull(null)
+        }
+      }, [current.token])
+      useEffect(() => {
+        if (current.token) loadFull()
+        else setFull(null)
+      }, [current.token, loadFull])
+      const refreshAll = () => {
+        reload()
+        loadFull()
+      }
 
       if (!state) {
         return h('div', { className: 'pwv-root', style: { padding: 12 } }, h(Styles),
@@ -1436,8 +1681,9 @@ window.__ModuleLoader__.load({
             state.peers.length === 0
               ? h('div', { className: 'pwv-muted' }, t('peers.empty'))
               : state.peers.map((peer) => h(PeerCard, { key: peer.id, t, peer, onChanged: reload })),
-            h(InviteSection, { t, state, onChanged: reload }),
-            h(SharingSettings, { t, state, onChanged: reload }),
+            h(InviteSection, { t, state, onChanged: refreshAll }),
+            h(SharingSettings, { t, state, onChanged: refreshAll }),
+            h(CrossNetSettings, { t, state, full, onChanged: refreshAll }),
             h(PasswordSection, { t }),
             h(AuditList, { t, audit: state.audit }),
             h(DangerSection, { t, onReset: reload }))

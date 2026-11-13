@@ -2,13 +2,13 @@
 
 **Peerweave** 是一个 DeepSeek Harness（DSH）插件：让两台或多台电脑上的 DSH 通过加密点对点链路互联，并在工作区中显示在线节点、查看对方工作区历史、按三档权限只读访问文件，或与对方的 DSH 对话。
 
-插件名 `Peerweave`，包名 `dsh-peerweave`。2026-11 查询 npm registry，`peerweave` 与 `dsh-peerweave` 均未被占用，未发现同名插件。
+插件名 `Peerweave`，包名 `dsh-peerweave`。2026-11 查询 npm registry，`peerweave` 与 `dsh-peerweave` 均未被占用，未发现同名插件。当前版本 **1.1.0**。
 
 ---
 
 ## 功能
 
-- **多机互联**：直连 TCP（P2P）或通过 SSH 隧道连接；链路双向可用，一端能连上即可。
+- **多机互联**：直连 TCP、自定义拨号地址、反向 SSH、内置中继、IPv6 双栈，或用 Tailscale / ZeroTier 组网；链路双向可用。
 - **工作区显示**：当前会话输入框下方显示已连接 / 离线节点，带连接状态与授权等级；点击展开历史、文件、对话。
 - **管理页**：设置 → Peerweave，管理密码、节点、邀请码、权限、共享目录、文件大小上限、审计记录。
 - **查看对方工作区历史**：列出对方共享目录内的会话及消息，只读。
@@ -52,14 +52,92 @@ git clone https://github.com/GGGinnnnn/dsh-peerweave.git
 
 ### 连接方式
 
-- **直连 TCP（默认）**：监听 `0.0.0.0:41337`（可在设置中修改）。跨网络时需要在路由器/防火墙放行该端口，或做端口转发。邀请码里的地址默认取自动检测的局域网 IPv4，可在设置页填写「供对方连接的地址」。
-- **SSH 隧道**：加入邀请码时勾选「通过 SSH 隧道」，填写 `user@host` 和对方在 SSH 主机上的监听端口。插件调用系统 `ssh`：
-  ```
-  ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes \
-      -o StrictHostKeyChecking=accept-new \
-      -L 127.0.0.1:<临时端口>:127.0.0.1:<对方端口> user@host
-  ```
-  **SSH 私钥完全由 OpenSSH 管理**，插件不读取、不复制、不保存私钥；私钥的口令加密由 `ssh-agent` / OpenSSH 负责。隧道内仍然是 Peerweave 自己的加密链路，两层加密互不替代。
+#### 1. 直连 TCP、自定义拨号地址
+
+- 默认监听 `0.0.0.0:41337`（可改）。跨网络时在路由器/防火墙放行该端口，或在设置里填「供对方连接的地址」。
+- B 加入邀请码时，可在「自定义拨号地址/端口」覆盖邀请码里的地址。适用于：
+  - ngrok / frp 等公网端口与 A 的监听端口不一致；
+  - 反向 SSH / 端口映射后对外端口不同；
+  - A 的邀请码里是内网地址，但 B 通过 VPN/隧道从别的地址访问。
+- 配对仍用邀请码里的指纹校验，改地址不会降低身份认证强度。
+
+#### 2. 反向 SSH（A 在 NAT 后，主动连 VPS）
+
+A 不需要公网 IP；A 主动向 VPS 建 `ssh -R`，由 VPS 暴露端口给 B。
+
+1. VPS 的 `sshd_config` 允许 `GatewayPorts clientspecified`（或 `yes`），并放行对外端口。
+2. A：设置 → Peerweave → 跨公网连接：
+   - 勾选「主动向 VPS 建立 ssh -R 隧道」；
+   - `SSH 目标` 填 `user@vps.example.com`；
+   - `VPS 上对外暴露的端口` 填如 `41337`；
+   - 「供对方连接的地址」填 VPS 的域名/IP。
+3. 保存后插件执行：
+   ```
+   ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes \
+       -o ServerAliveInterval=15 -o ServerAliveCountMax=3 \
+       -o StrictHostKeyChecking=accept-new \
+       -R 0.0.0.0:41337:127.0.0.1:41337 user@vps.example.com
+   ```
+4. A 生成「直连」邀请码（会自动使用 VPS 地址和 VPS 端口），B 直接加入。
+5. 状态里显示 tunnel 是否 running 以及 ssh 的最近错误。SSH 密钥仍由 OpenSSH/ssh-agent 管理。
+
+#### 3. 内置中继（NAT 到 NAT，两端都主动连中继）
+
+中继只做房间配对和字节转发，Peerweave 的端到端握手仍由两端完成，中继看不到明文。
+
+1. 在公网 VPS 运行仓库自带的中继：
+   ```bash
+   node relay.js --port 41338 --token 'choose-a-long-secret'
+   # 或安装后使用 bin：dsh-peerweave-relay --port 41338 --token ...
+   ```
+   也可以把「中继服务」开在插件里（设置 → 跨公网连接 → 中继服务），适合已有公网主机。
+2. A：设置 → 跨公网连接 → 中继客户端，填 VPS 地址、端口、token。
+3. A 生成邀请码时把「邀请方式」选为 **中继（NAT 到 NAT）**；两端都会主动连中继，不需要任何一端有可达端口。
+4. B 直接加入。配对成功后，节点记录会保存中继房间信息，断线后自动重连。
+
+中继协议：客户端发送 `PWRELAY 1 <room> <role> <token>`，中继回 `WAIT` 等待另一角色，配对后回 `OK` 并原样转发。room 是 32 位随机 hex；`token` 可选，建议在公网中继上启用。
+
+#### 4. IPv6 / 双栈
+
+设置 → Peerweave → 共享设置 → 监听地址：
+
+- `IPv4 only (0.0.0.0)`：默认。
+- `IPv6 + IPv4 dual-stack (::)`：同时接受 IPv6 和 IPv4（由操作系统决定映射行为）。
+- 「供对方连接的地址」填 A 的公网/内网 IPv6 字面量（例如 `2408:...`），创建直连邀请码即可。
+- 需要系统防火墙放行该端口，且两端都有可用 IPv6 路由。
+
+#### 5. Tailscale / ZeroTier（可选，跨公网最省事）
+
+插件设置页的「组网教程」里也内置了同样的步骤。
+
+**Tailscale**
+
+1. 两台电脑都安装 Tailscale，登录同一账号（同一 tailnet）。
+2. 确认两台设备在线，记下 A 的 `100.x.y.z` 地址或 MagicDNS 名称。
+3. A：「供对方连接的地址」填该地址；创建「直连」邀请码。
+4. B：加入邀请码。不需要端口映射。
+5. 直连不通时会自动走 Tailscale DERP 中继；Peerweave 仍然端到端加密。
+6. 建议用 Tailscale ACL/tag 限制哪些设备能访问 A。
+
+**ZeroTier**
+
+1. 创建 ZeroTier Network，两台电脑加入并授权。
+2. 记下 A 的 Managed IP。
+3. A：「供对方连接的地址」填该 Managed IP；创建「直连」邀请码。
+4. B：加入邀请码。不需要端口映射。
+5. 保持网络私有：Managed IP 只有被授权的成员能访问。
+
+#### 6. SSH 隧道（原有方式）
+
+加入邀请码时勾选「通过 SSH 隧道」，填写 `user@host` 和对方在 SSH 主机上的监听端口。插件调用：
+
+```
+ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes \
+    -o StrictHostKeyChecking=accept-new \
+    -L 127.0.0.1:<临时端口>:127.0.0.1:<对方端口> user@host
+```
+
+SSH 目标必须是运行对方 DSH 的机器（转发到的是 SSH 主机的 loopback）。私钥由 OpenSSH 管理，插件不读取、不保存；隧道内仍然是 Peerweave 自己的加密链路。
 
 ---
 
@@ -130,10 +208,14 @@ git clone https://github.com/GGGinnnnn/dsh-peerweave.git
 |---|---|---|
 | 单文件上限（MiB） | 别人可读取的最大文件；实际字节数会限制在 1 KiB–2048 MiB（2 GiB） | 是 |
 | 监听端口 | 默认 41337；被占用时自动向后尝试 10 个端口并在界面显示实际端口 | 是 |
+| 监听地址 | `0.0.0.0`（仅 IPv4）或 `::`（IPv6 + IPv4 双栈） | 是 |
 | 共享工作区根目录 | 空 = 默认工作区；必须是已存在目录 | 是 |
 | 显示名称 | 其他节点看到的名字 | 是 |
 | 供对方连接的地址 | 写进邀请码的主机名/IP；空 = 自动检测局域网 IPv4 | 是 |
 | 自动重连 | 已知节点断线后按指数退避重连 | 是 |
+| 反向 SSH | 目标、VPS 端口、额外参数；A 主动向 VPS 建 `-R` | 是 |
+| 中继客户端 | 中继地址/端口/token；生成中继邀请码时使用 | 是 |
+| 中继服务 | 是否在本机监听中继端口、端口与 token | 是 |
 | 修改密码 / 移除节点 / 清空一切 | — | 是 |
 
 ---
@@ -174,7 +256,9 @@ Peerweave 的浏览界面和模型上下文是分开的：
 
 ## 已知限制
 
-- **没有中继服务器**：两端网络必须能直连，或使用 SSH 隧道；插件不做打洞/NAT 穿透。
+- **没有公共中继/打洞服务**：中继和反向 SSH 需要你自备一台公网 VPS；插件不运营公共基础设施，也不做 UDP 打洞。两端都在 CGNAT 后且没有 VPS 时，请用 Tailscale / ZeroTier。
+- **中继只见元数据**：中继转发密文，但能看到连接时间、房间和流量大小；公网中继建议启用 token，并保护邀请码/房间信息。
+- **反向 SSH 依赖 VPS 配置**：需要 `GatewayPorts clientspecified`（或 `yes`），否则转发端口只在 VPS 回环可访问。
 - **内联读取上限 8 MiB**：更大的文件不能直接在预览里全文读取，必须使用「复制到我的工作区」走分块传输（单文件硬上限 2 GiB）。
 - **单一共享根目录**：一个密码库对应一个共享根；如果想让不同节点看不同目录，需要分配置档运行。
 - **第三档是真实控制权**：访客智能体拥有常规工具权限；用户可拒绝其触发的审批，但不应把第三档授予不可信对象。
@@ -182,17 +266,19 @@ Peerweave 的浏览界面和模型上下文是分开的：
 - **首次共享目录是启发式**：采用最近真实会话的 cwd；多工作区用户请在设置中显式指定。
 - **本地目录安装需要重启**：Host 代码在进程内以模块代际加载；更新源码后需重启 DSH。Client 代码刷新页面即可。
 - **SSH 隧道依赖系统 `ssh`**：Windows 需启用 OpenSSH Client；若目标不在 `known_hosts`，使用 `accept-new`（TOFU）。
-- 未做 IPv6 专门适配；监听 `0.0.0.0`，连接使用邀请码中的 IPv4/主机名。
+- **IPv6 需要系统支持**：双栈监听已验证；本机测试环境禁止 `::1` 连接，因此只用 IPv4 半边验证了同一监听。跨公网 IPv6 还需防火墙和路由放行。
+- **中继房间是长期凭据**：首次配对后房间信息写入节点记录以便自动重连；如果房间 token/信息泄露，攻击者可能占用房间造成 DoS（无法解密或冒充，握手仍双向认证）。可移除节点后重新配对来轮换房间。
 
 ---
 
 ## 测试
 
-源码内含三组测试，均已通过：
+源码内含四组测试，均已通过：
 
 1. `node test/protocol.test.mjs` — 握手、邀请密钥、指纹固定、AES-GCM 计数器/密钥/AAD 绑定。
 2. `node test/service.test.mjs` — 两个完整服务实例在进程内互连：创建邀请、配对、0–3 档校验、历史过滤、路径逃逸拒绝、大小上限、复制文件、**12 MiB 大文件分块复制与内联读取上限**、10 秒门禁、访客对话、改密、持久化重载、移除节点归档、清空、**忘记密码的 10 秒强制清除**；使用假 DSH 会话服务。
-3. `node test/live.mjs` — 在真实运行中的 DSH 内加载最终源码（通过临时 `dsh-peerweave-selftest` bundle），连接独立 stand-in 节点，验证**真实会话历史**（本工作区 20+ 会话）、**真实文件读取**与大小限制、**真实 Agent 对话**（回复 `PEERWEAVE-OK`）、出站拨号与 10 秒门禁。测试后已重置临时密码库并移除临时 bundle。
+3. `node test/network.test.mjs` — 内置中继配对、中继 token 校验、历史经中继传输、自定义拨号地址/端口覆盖、反向 SSH 设置校验与**假 ssh -R 转发的完整邀请/连接路径**、IPv6/双栈绑定（本机环境用 IPv4 半边验证监听）。
+4. `node test/live.mjs` — 在真实运行中的 DSH 内加载最终源码（通过临时 `dsh-peerweave-selftest` bundle），连接独立 stand-in 节点，验证**真实会话历史**（本工作区 20+ 会话）、**真实文件读取**与大小限制、**真实 Agent 对话**（回复 `PEERWEAVE-OK`）、出站拨号与 10 秒门禁。测试后已重置临时密码库并移除临时 bundle。
 
 另附 `test/standalone-peer.mjs` 与 `test/e2e.mjs` 作为开发期命令行联调工具。
 
@@ -202,15 +288,18 @@ Peerweave 的浏览界面和模型上下文是分开的：
 
 ```
 dsh-peerweave/
-├── package.json          # bundle 声明 + dsh.client
+├── package.json          # bundle 声明 + dsh.client + relay bin
 ├── cordis.patch.yml      # 插入 peerweave 行
 ├── index.js              # Host 接线：API 路由 + 工具
 ├── client.js             # Client UI：工作区 dock + 设置页
+├── relay.js              # 公网 VPS 上可独立运行的中继
 ├── lib/
 │   ├── util.js           # 编码/密钥/密码密封/安全路径
 │   ├── protocol.js       # 握手与加密帧
 │   ├── store.js          # 状态、节点、邀请、审计
 │   ├── service.js        # 监听、连接、权限、历史/文件/对话
+│   ├── relay-server.js   # 中继房间配对与字节转发
+│   ├── relay-client.js   # 中继客户端握手
 │   ├── api.js            # 同源管理 API 与围栏
 │   └── tools.js          # 4 个 Agent 工具
 ├── locale/{en,zh}.json   # 插件管理页元数据
