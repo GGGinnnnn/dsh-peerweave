@@ -628,7 +628,7 @@ window.__ModuleLoader__.load({
       '.pwv-sidebtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px}',
       '.pwv-overlay{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;padding:24px}',
       '.pwv-modal{display:flex;flex-direction:column;width:min(1120px,96vw);height:min(780px,90vh);background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);border-radius:14px;box-shadow:0 24px 64px rgba(0,0,0,.28);overflow:hidden}',
-      '.pwv-modalhead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l1)}',
+      '.pwv-modalhead{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l1)}',
       '.pwv-modalbody{display:flex;flex:1;min-height:0}',
       '.pwv-peerlist{width:230px;flex:0 0 230px;border-right:1px solid var(--dsw-alias-border-l1);overflow:auto;padding:8px}',
       '.pwv-modalcontent{flex:1;min-width:0;overflow:auto;padding:12px}',
