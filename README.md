@@ -42,6 +42,8 @@ git clone https://github.com/GGGinnnnn/dsh-peerweave.git
 3. 打开 设置 → Peerweave（或点击输入框下方的 **Set up Peerweave / 设置 Peerweave**），创建密码。
 4. 以后每次 DSH 重启，插件都处于锁定状态；在设置页或输入框下方的锁形入口输入一次密码解锁后，才会开始监听和自动重连。身份私钥受密码保护，这是有意的取舍。
 
+> **安装后看不到设置页/侧边栏入口？** DSH 的 Plugin Manager 会把新 bundle 追加到 `dsh.profile.bundles` 末尾；Client 半如果在 `@deepseek-ai/dsh-web-app` 之后加载，可能不进入本次 Web Boot 图，表现为 Host API 正常但界面完全没有。让 Agent 调用 `peerweave_repair_client_order` 工具（或手动把 `dsh-peerweave` 移到 `@deepseek-ai/dsh-web-app` 之前），然后**重启 DSH**。卸载重装会再次把它追加到末尾，所以升级/重装后需要再修复一次。
+
 > 忘记密码时：打开 设置 → Peerweave 的锁定页，在密码输入框下方使用 **「强制清除 Peerweave…」**。点击后进入二级确认，必须等满 10 秒才能确认；确认后插件恢复到刚安装、尚未设置密码的状态，身份密钥、密码、全部节点和所有设置都会被删除。也可以退出 DSH 后手动删除 `%DSH_HOME%\peerweave\<配置档>\state.json`。已知密码时可在设置页使用「清空一切」。
 
 ---
@@ -242,12 +244,13 @@ SSH 目标必须是运行对方 DSH 的机器（转发到的是 SSH 主机的 lo
 
 ## Agent 工具
 
-插件向本机 Agent 注册 5 个工具（权限变更仍是用户专属操作）：
+插件向本机 Agent 注册 6 个工具（权限变更仍是用户专属操作）：
 
 - `peerweave_peers` — 列出节点、连接状态、双方授权。
 - `peerweave_history` — 列出/读取远端全部工作区的历史（需对方授予第 1 档+）。
 - `peerweave_read_file` — 读取远端某个工作区的文件（需第 2 档+，先列出工作区再指定 `workspace`，受对方大小上限约束）。
 - `peerweave_import_memory` — 让远端 DSH 总结记忆并导入本机新对话，同时复制相关文件（需第 2 档+；会创建本地会话并启动一次本地 Agent turn）。
+- `peerweave_repair_client_order` — 修复本机 profile 的 bundle 顺序（`dsh-peerweave` 必须在 `@deepseek-ai/dsh-web-app` 之前），重启后 Client UI 才会出现。
 - `peerweave_chat` — 给远端 DSH 发消息并取回回复（需第 3 档）。
 
 插件锁定时，工具会提示用户先到 设置 → Peerweave 解锁。
@@ -287,7 +290,7 @@ Peerweave 的浏览界面和模型上下文是分开的：
 - **记忆导入会启动本地 Agent**：导入不是纯文件操作；本地会新建工作区/会话并跑一次 Agent turn，若不想产生本地 token，可只浏览历史或复制单个文件。
 - **左侧工作区原生分组不可插槽扩展**：DSH 的「工作区」列表是宿主 Workspace 数据，没有给插件增加远程工作区分组的插槽；Peerweave 用左侧底部入口 + 全屏工作区浏览器实现同样的「节点 → 工作区 → 会话」导航，避免替换整个侧边栏导致升级失效。
 - **访客会话会出现在会话列表**：标题带 `Peerweave guest`，便于发现；移除节点/重置时归档。
-- **本地目录安装需要重启**：Host 代码在进程内以模块代际加载；更新源码后需重启 DSH。Client 代码刷新页面即可。
+- **本地目录安装需要重启**：Host 代码在进程内以模块代际加载；更新源码后需重启 DSH。Client 代码是否能进入启动图取决于 bundle 顺序，见安装章节的修复说明。
 - **SSH 隧道依赖系统 `ssh`**：Windows 需启用 OpenSSH Client；若目标不在 `known_hosts`，使用 `accept-new`（TOFU）。
 - **IPv6 需要系统支持**：双栈监听已验证；本机测试环境禁止 `::1` 连接，因此只用 IPv4 半边验证了同一监听。跨公网 IPv6 还需防火墙和路由放行。
 - **中继房间是长期凭据**：首次配对后房间信息写入节点记录以便自动重连；如果房间 token/信息泄露，攻击者可能占用房间造成 DoS（无法解密或冒充，握手仍双向认证）。可移除节点后重新配对来轮换房间。
