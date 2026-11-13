@@ -794,15 +794,50 @@ window.__ModuleLoader__.load({
         : peers.length > 1
           ? `${t('dock.title')} · ${peers.length}`
           : t('dock.title')
-      return h('div', { className: 'pwv-sideentry' },
-        h('button', {
-          type: 'button',
-          className: 'pwv-sidebtn',
-          title: peers.length === 1 ? `${peers[0].name} — ${t('section.title')}` : t('section.title'),
-          onClick: () => setPeerPanel({ open: true }),
+      return h('div', {
+        className: 'pwv-sideentry',
+        style: { display: 'flex', alignItems: 'center', minHeight: 36 },
+      },
+      h(Styles),
+      h('button', {
+        type: 'button',
+        className: 'pwv-sidebtn',
+        title: peers.length === 1 ? `${peers[0].name} — ${t('section.title')}` : t('section.title'),
+        onClick: () => setPeerPanel({ open: true }),
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          width: '100%',
+          height: 36,
+          padding: '0 8px',
+          border: 0,
+          borderRadius: 8,
+          background: 'transparent',
+          color: 'var(--dsw-alias-label-secondary)',
+          font: 'inherit',
+          fontSize: 14,
+          lineHeight: '20px',
+          textAlign: 'start',
+          cursor: 'pointer',
         },
-        h('span', { className: `pwv-dot ${state && state.locked ? 'warn' : connected ? 'on' : 'off'}` }),
-        wide === false ? null : h('span', { className: 'pwv-nowrap' }, label)))
+      },
+      h('span', {
+        style: {
+          width: 8,
+          height: 8,
+          flex: '0 0 auto',
+          borderRadius: '50%',
+          background: state && state.locked
+            ? 'var(--dsw-alias-state-warn-primary)'
+            : connected
+              ? 'var(--dsw-alias-state-success-primary)'
+              : 'var(--dsw-alias-label-tertiary)',
+        },
+      }),
+      wide === false
+        ? h('span', { style: { fontSize: 16, lineHeight: 1 } }, '◈')
+        : h('span', { style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, label)))
     }
 
     function PeerOverlay({ ctx }) {

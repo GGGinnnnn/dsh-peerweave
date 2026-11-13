@@ -95,4 +95,22 @@ function applyInner(ctx, config) {
       c.logger?.info?.('[peerweave] management api and tools registered')
     },
   )
+
+  // The web boot graph is composed when the web app starts. A bundle loaded
+  // after that point can be missing from the page's `__DSH_BOOT__` even though
+  // the Host entry is active. Asking client-modules to republish this bundle
+  // makes it re-compose its graph; a page reload then includes the client half.
+  // This is harmless when the entry is already present.
+  const nudgeClientGraph = () => {
+    try {
+      const clientModules = ctx.get('clientModules')
+      if (clientModules && typeof clientModules.rebuilt === 'function') clientModules.rebuilt('dsh-peerweave')
+    } catch {
+      /* optional service; ignore */
+    }
+  }
+  for (const delay of [0, 500, 2000, 6000]) {
+    const timer = setTimeout(nudgeClientGraph, delay)
+    timer.unref?.()
+  }
 }
