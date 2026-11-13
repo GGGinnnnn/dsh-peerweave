@@ -16,6 +16,7 @@ window.__ModuleLoader__.load({
       'section.title': 'Peerweave',
       'section.description': 'Encrypted links to DSH instances on other computers.',
       'dock.title': 'Peerweave',
+      'dock.expand': 'Expand',
       'dock.setupChip': 'Set up Peerweave',
       'status.connected': 'Connected',
       'status.offline': 'Offline',
@@ -230,6 +231,7 @@ window.__ModuleLoader__.load({
       'section.title': 'Peerweave 加密互联',
       'section.description': '与其他电脑上的 DSH 建立加密链接。',
       'dock.title': 'Peerweave',
+      'dock.expand': '全屏',
       'dock.setupChip': '设置 Peerweave',
       'status.connected': '已连接',
       'status.offline': '离线',
@@ -1072,6 +1074,7 @@ window.__ModuleLoader__.load({
               h('span', { className: `pwv-dot ${peer.connected ? 'on' : 'off'}` }),
               h('strong', { className: 'pwv-grow' }, peer.name),
               h('span', { className: 'pwv-badge' }, `${t('peers.grantedToMe')}: ${peer.remoteTier >= 0 ? t(`tier.${peer.remoteTier}`) : t('tier.unknown')}`),
+              h(Btn, { ghost: true, onClick: () => setPeerPanel({ open: true, peerId: peer.id }) }, t('dock.expand')),
               peer.remoteTier >= 2
                 ? h(Btn, { ghost: true, onClick: () => setMemoryTarget({}) }, t('history.memory'))
                 : null,
