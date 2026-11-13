@@ -4,6 +4,8 @@
 
 插件名 `Peerweave`，包名 `dsh-peerweave`。2026-11 查询 npm registry，`peerweave` 与 `dsh-peerweave` 均未被占用，未发现同名插件。当前版本 **1.1.0**。
 
+> 每种连接方式的完整分步教程（含 VPS、防火墙、systemd、故障排查）见 **[docs/TUTORIALS.md](docs/TUTORIALS.md)**；插件 设置 → Peerweave → 跨公网连接 里也内置了精简版。
+
 ---
 
 ## 功能
@@ -303,6 +305,7 @@ dsh-peerweave/
 │   ├── api.js            # 同源管理 API 与围栏
 │   └── tools.js          # 4 个 Agent 工具
 ├── locale/{en,zh}.json   # 插件管理页元数据
+├── docs/TUTORIALS.md     # 全部连接方式的分步教程
 ├── icon.svg              # 原创图标
 └── test/                 # 协议 / 服务 / 真实环境测试
 ```
