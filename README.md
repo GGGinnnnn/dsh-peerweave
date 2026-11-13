@@ -2,7 +2,7 @@
 
 **Peerweave** 是一个 DeepSeek Harness（DSH）插件：让两台或多台电脑上的 DSH 通过加密点对点链路互联，并在工作区中显示在线节点、查看对方工作区历史、按三档权限只读访问文件，或与对方的 DSH 对话。
 
-插件名 `Peerweave`，包名 `dsh-peerweave`。2026-11 查询 npm registry，`peerweave` 与 `dsh-peerweave` 均未被占用，未发现同名插件。当前版本 **1.2.0**。
+插件名 `Peerweave`，包名 `dsh-peerweave`。2026-11 查询 npm registry，`peerweave` 与 `dsh-peerweave` 均未被占用，未发现同名插件。当前版本 **1.2.1**。
 
 > 每种连接方式的完整分步教程（含 VPS、防火墙、systemd、故障排查）见 **[docs/TUTORIALS.md](docs/TUTORIALS.md)**；插件 设置 → Peerweave → 跨公网连接 里也内置了精简版。
 
@@ -43,6 +43,10 @@ git clone https://github.com/GGGinnnnn/dsh-peerweave.git
 4. 以后每次 DSH 重启，插件都处于锁定状态；在设置页或输入框下方的锁形入口输入一次密码解锁后，才会开始监听和自动重连。身份私钥受密码保护，这是有意的取舍。
 
 > **安装后看不到设置页/侧边栏入口？** DSH 的 Plugin Manager 会把新 bundle 追加到 `dsh.profile.bundles` 末尾；Client 半如果在 `@deepseek-ai/dsh-web-app` 之后加载，可能不进入本次 Web Boot 图，表现为 Host API 正常但界面完全没有。让 Agent 调用 `peerweave_repair_client_order` 工具（或手动把 `dsh-peerweave` 移到 `@deepseek-ai/dsh-web-app` 之前），然后**重启 DSH**。卸载重装会再次把它追加到末尾，所以升级/重装后需要再修复一次。
+>
+> **Console 报 `slot "..." is not declared`？** 这是 Client 半加载得比宿主插槽声明更早。1.2.1 起所有插槽都通过 `ctx.slots.inject(slot, () => ctx.slots.register(...))` 等待 owner；请更新到 1.2.1 或更新源码后完整重启。不要再用直接的 `ctx.slots.register`，它在早期加载时会被宿主拒绝。
+>
+> 1.2.1 的修复不改变数据或权限：安装后先确认 `设置 → Peerweave` 和左侧底部 Peerweave 入口是否出现；若仍没有，打开 DevTools Console 把第一条 `[peerweave] ... registration failed` / `slot entry crashed` 报错发出来。
 
 > 忘记密码时：打开 设置 → Peerweave 的锁定页，在密码输入框下方使用 **「强制清除 Peerweave…」**。点击后进入二级确认，必须等满 10 秒才能确认；确认后插件恢复到刚安装、尚未设置密码的状态，身份密钥、密码、全部节点和所有设置都会被删除。也可以退出 DSH 后手动删除 `%DSH_HOME%\peerweave\<配置档>\state.json`。已知密码时可在设置页使用「清空一切」。
 

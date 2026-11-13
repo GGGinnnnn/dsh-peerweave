@@ -1,6 +1,6 @@
 {
   "name": "dsh-peerweave",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "description": "Peerweave: encrypted peer-to-peer links between DeepSeek Harness instances with password-guarded, tiered access.",
   "keywords": [
