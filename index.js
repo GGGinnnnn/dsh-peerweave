@@ -71,6 +71,8 @@ function applyInner(ctx, config) {
           query: c.sessionQuery,
           workingDirectory: c.workingDirectory,
           registry: typeof c.get === 'function' ? c.get('workspaceRegistry') : undefined,
+          llm: typeof c.get === 'function' ? c.get('llm') : undefined,
+          defaultModel: typeof c.get === 'function' ? c.get('agentDefaultModel') : undefined,
         })
       } catch (error) {
         c.logger?.error?.(`[peerweave] dependency attach failed: ${error}`)

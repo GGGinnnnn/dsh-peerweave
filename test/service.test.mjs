@@ -72,12 +72,15 @@ function createFakes(workspace, label) {
       return { accepted: true }
     },
     async wait() {
+      const summary = state.chatText.includes('Peerweave memory summarizer')
+        ? '{"summary":"Imported alpha memory","files":["hello.txt"]}'
+        : `echo: ${state.chatText}`
       return {
         reason: 'idle',
         state: { cursor: 1 },
         output: {
           records: [
-            { type: 'event', event: { type: 'assistant/message', seq: 10, time: Date.now(), data: { message: { role: 'assistant', content: [{ type: 'text', text: `echo: ${state.chatText}` }] } } } },
+            { type: 'event', event: { type: 'assistant/message', seq: 10, time: Date.now(), data: { message: { role: 'assistant', content: [{ type: 'text', text: summary }] } } } },
           ],
           truncated: false,
         },
@@ -97,6 +100,7 @@ function createFakes(workspace, label) {
   }
   const registry = {
     archived: [],
+    archivedSessionIds: [],
     list() {
       return [{ id: `ws-${label}`, path: workspace, title: `Workspace ${label}` }]
     },
@@ -196,16 +200,20 @@ try {
   const prepared1 = await A.service.prepareGrant(peerBOnA.id, 1, PASS_A, PEER_A_IP)
   assert.equal(prepared1.delayMs, 0)
   await A.service.commitGrant(peerBOnA.id, 1, prepared1.nonce, PASS_A, PEER_A_IP)
+  A.fake.registry.archivedSessionIds = ['session-alpha-1']
   const history = await B.service.remoteCall(peerAOnB.id, 'history.list', {})
   assert.equal(history.sessions.length, 2, 'all sessions across workspaces are exposed')
   assert.ok(Array.isArray(history.workspaces) && history.workspaces.length >= 1)
   assert.equal(history.workspaces[0].title, 'Workspace alpha')
+  assert.equal(history.archivedCount, 1)
+  assert.ok(history.workspaces.some((group) => group.archivedSessions.length === 1))
   assert.equal(history.sessions[0].title, 'Fixture alpha')
   const transcript = await B.service.remoteCall(peerAOnB.id, 'history.read', { sessionId: history.sessions[0].id })
   assert.equal(transcript.messages.length, 2)
   assert.equal(transcript.messages[0].text, 'hello from alpha')
   log('tier 1 history exposes all workspaces, grouped by workspace')
   await expectFailure('tier 1 files', B.service.remoteCall(peerAOnB.id, 'files.list', { path: '' }), 'permission-denied')
+  await expectFailure('tier 1 memory', B.service.remoteCall(peerAOnB.id, 'memory.summarize', { maxChars: 1000 }), 'permission-denied')
 
   const prepared2 = await A.service.prepareGrant(peerBOnA.id, 2, PASS_A, PEER_A_IP)
   await A.service.commitGrant(peerBOnA.id, 2, prepared2.nonce, PASS_A, PEER_A_IP)
@@ -217,6 +225,25 @@ try {
   const file = await B.service.remoteCall(peerAOnB.id, 'files.read', { path: 'sub/inner.txt', workspaceId: fileWorkspaces.workspaces[0].id })
   assert.equal(file.text, 'inner file\n')
   log('tier 2 file access selects any workspace')
+
+  A.service.deps.defaultModel = { currentSelection: () => ({ provider: 'fixture', model: 'fixture-1' }) }
+  const memory = await B.service.remoteCall(peerAOnB.id, 'memory.summarize', {
+    workspaceId: fileWorkspaces.workspaces[0].id,
+    maxChars: 1000,
+  })
+  assert.equal(memory.summary, 'Imported alpha memory')
+  assert.deepEqual(memory.files, ['hello.txt'])
+  const imported = await B.service.importMemory({
+    peerId: peerAOnB.id,
+    workspaceId: fileWorkspaces.workspaces[0].id,
+    maxChars: 1000,
+  })
+  assert.ok(imported.sessionId)
+  assert.deepEqual(imported.files, ['hello.txt'])
+  assert.equal(await readFile(join(imported.workspacePath, 'files', 'hello.txt'), 'utf8'), 'hello from workspace A\n')
+  assert.match(await readFile(join(imported.workspacePath, 'MEMORY.md'), 'utf8'), /Imported alpha memory/)
+  log('memory summary and import copy the referenced files into a new local conversation')
+
   await expectFailure('traversal', B.service.remoteCall(peerAOnB.id, 'files.read', { path: '../workspace-b/bravo.txt' }), 'invalid-path')
   log('tier 2 file list/read works and traversal is refused')
 

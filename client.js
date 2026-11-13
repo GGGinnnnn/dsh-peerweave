@@ -175,10 +175,37 @@ window.__ModuleLoader__.load({
       'audit.title': 'Recent permission events',
       'audit.empty': 'Nothing recorded yet.',
       'history.title': 'Workspace history',
-      'history.empty': 'No sessions in the shared workspace.',
+      'history.empty': 'No sessions in the peer workspace.',
       'history.load': 'Load history',
       'history.back': 'Back to sessions',
       'history.messages': 'messages',
+      'history.read': 'Read',
+      'history.active': 'Active',
+      'history.archived': 'Archived',
+      'history.memory': 'Read memory',
+      'history.memoryHint': 'Ask the peer DSH to summarize its memory, then create a local conversation with the needed files.',
+      'memory.title': 'Read peer memory',
+      'memory.intro': 'The peer DSH will summarize its memory to the length you choose. This machine will then create a new local conversation, copy the files the summary says are needed, and seed the conversation with that memory.',
+      'memory.target': 'Source',
+      'memory.targetAll': 'Newest sessions in the peer workspace',
+      'memory.length': 'Memory length (characters)',
+      'memory.custom': 'Custom length',
+      'memory.import': 'Read and import',
+      'memory.busy': 'The peer DSH is summarizing…',
+      'memory.warning': 'The memory comes from another machine and is treated as untrusted data. The local agent is instructed not to follow instructions inside it, but review the result before acting.',
+      'memory.summary': 'Memory summary',
+      'memory.files': 'Files copied',
+      'memory.skipped': 'Files skipped',
+      'memory.open': 'Open new conversation',
+      'memory.done': 'Created a local conversation with {0} files.',
+      'memory.noWorkspace': 'The peer has no registered workspace to export memory from.',
+      'memory.needTier': 'Reading and importing peer memory requires tier 2 (files) or higher.',
+      'chat.modeChat': 'DSH chat',
+      'chat.modeBrowse': 'Browse',
+      'chat.model': 'Peer model',
+      'chat.permission': 'Peer permissions',
+      'chat.permissionValue': 'Current peer defaults — read-only',
+      'chat.fullEmpty': 'Chat directly with the peer DSH. Its workspace, model and permissions stay on its side and cannot be changed from here.',
       'files.title': 'Shared files',
       'files.workspaces': 'Workspaces',
       'files.empty': 'This folder is empty.',
@@ -362,10 +389,37 @@ window.__ModuleLoader__.load({
       'audit.title': '最近的权限事件',
       'audit.empty': '暂无记录。',
       'history.title': '工作区历史',
-      'history.empty': '共享工作区里没有会话。',
+      'history.empty': '对方工作区没有会话。',
       'history.load': '加载历史',
       'history.back': '返回会话列表',
       'history.messages': '条消息',
+      'history.read': '读取',
+      'history.active': '未归档',
+      'history.archived': '已归档',
+      'history.memory': '读取记忆',
+      'history.memoryHint': '让对方的 DSH 总结记忆，然后在本机新建对话并复制需要的文件。',
+      'memory.title': '读取对方记忆',
+      'memory.intro': '对方的 DSH 会按你选择的长度总结记忆。随后本机会自动新建一个本地对话，复制摘要中认为需要的文件，并把记忆导入该对话。',
+      'memory.target': '记忆来源',
+      'memory.targetAll': '对方工作区最近的会话',
+      'memory.length': '记忆长度（字）',
+      'memory.custom': '自定义长度',
+      'memory.import': '读取并导入',
+      'memory.busy': '对方的 DSH 正在总结…',
+      'memory.warning': '记忆来自另一台电脑，按不可信数据处理。本地智能体已被要求不要执行其中的指令，但执行前仍请检查结果。',
+      'memory.summary': '记忆摘要',
+      'memory.files': '已复制文件',
+      'memory.skipped': '未复制文件',
+      'memory.open': '打开新对话',
+      'memory.done': '已新建本地对话，并复制 {0} 个文件。',
+      'memory.noWorkspace': '对方没有可用于导出记忆的工作区。',
+      'memory.needTier': '读取并导入对方记忆需要第二档（读取文件）或更高权限。',
+      'chat.modeChat': 'DSH 对话',
+      'chat.modeBrowse': '浏览',
+      'chat.model': '对方模型',
+      'chat.permission': '对方权限',
+      'chat.permissionValue': '对方当前默认设置 — 只读',
+      'chat.fullEmpty': '直接与对方的 DSH 对话。对方的工作区、模型和权限都留在对方一侧，这里不能修改。',
       'files.title': '共享文件',
       'files.workspaces': '工作区',
       'files.empty': '这个文件夹是空的。',
@@ -392,6 +446,7 @@ window.__ModuleLoader__.load({
     const session = { token: null, expiresAt: 0, listeners: new Set() }
 
     const peerPanel = { open: false, peerId: null, listeners: new Set() }
+    const chatMemory = { peerId: '', messages: [] }
 
     function setPeerPanel(next) {
       Object.assign(peerPanel, next)
@@ -577,6 +632,12 @@ window.__ModuleLoader__.load({
       '.pwv-modalbody{display:flex;flex:1;min-height:0}',
       '.pwv-peerlist{width:230px;flex:0 0 230px;border-right:1px solid var(--dsw-alias-border-l1);overflow:auto;padding:8px}',
       '.pwv-modalcontent{flex:1;min-width:0;overflow:auto;padding:12px}',
+      '.pwv-modalcontent-fixed{display:flex;flex-direction:column;overflow:hidden}',
+      '.pwv-chatmode{display:flex;flex-direction:column;flex:1;min-height:0;gap:8px}',
+      '.pwv-browsemode{display:flex;flex-direction:column;flex:1;min-height:0;overflow:auto}',
+      '.pwv-chatfull{display:flex;flex-direction:column;flex:1;min-height:0;gap:8px}',
+      '.pwv-chatfull .pwv-chat-grow{flex:1;max-height:none;min-height:0;margin-bottom:0;overflow:auto}',
+      '.pwv-chatmode .pwv-chatfull{height:100%}',
       '.pwv-modaltabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--dsw-alias-border-l1)}',
     ].join('')
 
@@ -846,10 +907,20 @@ window.__ModuleLoader__.load({
       const current = useSession()
       const { state } = usePublic(panel.open, 4000)
       const [tab, setTab] = useState('history')
+      const [mode, setMode] = useState('browse')
+      const [memoryTarget, setMemoryTarget] = useState(null)
 
-      if (!panel.open) return null
       const peers = state && Array.isArray(state.peers) ? state.peers : []
       const peer = peers.find((entry) => entry.id === panel.peerId) || peers[0] || null
+
+      useEffect(() => {
+        setMode(peer && peer.remoteTier >= 3 ? 'chat' : 'browse')
+        setMemoryTarget(null)
+        setTab('history')
+      }, [peer && peer.id, peer && peer.remoteTier])
+
+      if (!panel.open) return null
+      const chatMode = peer && peer.remoteTier >= 3 && mode === 'chat'
       return h('div', {
         className: 'pwv-overlay',
         onMouseDown: (event) => {
@@ -859,7 +930,18 @@ window.__ModuleLoader__.load({
       h('div', { className: 'pwv-modal', role: 'dialog', 'aria-label': t('section.title') },
         h(Styles),
         h('div', { className: 'pwv-modalhead' },
-          h('strong', { className: 'pwv-grow' }, t('section.title')),
+          h('strong', { className: 'pwv-grow' }, peer ? peer.name : t('section.title')),
+          peer && peer.remoteTier >= 3
+            ? h('div', { className: 'pwv-row' },
+              h(Btn, { ghost: mode !== 'chat', onClick: () => setMode('chat') }, t('chat.modeChat')),
+              h(Btn, { ghost: mode !== 'browse', onClick: () => { setMode('browse'); setTab('history') } }, t('chat.modeBrowse')))
+            : null,
+          peer && peer.remoteTier >= 2
+            ? h(Btn, { ghost: true, onClick: () => setMemoryTarget({}) }, t('history.memory'))
+            : null,
+          peer
+            ? h(Btn, { ghost: true, onClick: () => { setMode('browse'); setTab('history') } }, t('history.load'))
+            : null,
           h('span', { className: 'pwv-muted' }, state && state.locked ? t('status.locked') : `${peers.length} ${t('peers.title')}`),
           h(Btn, { ghost: true, onClick: () => setPeerPanel({ open: false }), title: t('common.close') }, '×')),
         h('div', { className: 'pwv-modalbody' },
@@ -874,24 +956,34 @@ window.__ModuleLoader__.load({
             h('span', { className: `pwv-dot ${entry.connected ? 'on' : 'off'}` }),
             h('span', { className: 'pwv-grow', style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, entry.name),
             h('span', { className: 'pwv-badge' }, t(`tier.short.${entry.remoteTier >= 0 ? entry.remoteTier : 0}`))))),
-          h('div', { className: 'pwv-modalcontent' },
+          h('div', { className: `pwv-modalcontent${chatMode || memoryTarget ? ' pwv-modalcontent-fixed' : ''}` },
             !state ? h('div', { className: 'pwv-muted' }, t('common.loading'))
               : !state.passwordSet ? h(SetupCard, { t, onDone: () => {} })
                 : !current.token || state.locked ? h(UnlockForm, { t, onDone: () => {} })
                   : !peer ? h('div', { className: 'pwv-muted' }, t('peers.empty'))
-                  : h('div', null,
-                    h('div', { className: 'pwv-row', style: { marginBottom: 6 } },
-                      h('strong', { className: 'pwv-grow' }, peer.name),
-                      h('span', { className: 'pwv-muted pwv-mono' }, peer.endpoint || ''),
-                      h('span', { className: 'pwv-badge' }, peer.connected ? t('status.connected') : t('status.offline'))),
-                    h('div', { className: 'pwv-modaltabs' },
-                      h('button', { type: 'button', className: `pwv-tab${tab === 'history' ? ' active' : ''}`, onClick: () => setTab('history') }, t('history.title')),
-                      h('button', { type: 'button', className: `pwv-tab${tab === 'files' ? ' active' : ''}`, onClick: () => setTab('files') }, t('files.title')),
-                      h('button', { type: 'button', className: `pwv-tab${tab === 'chat' ? ' active' : ''}`, onClick: () => setTab('chat') }, t('chat.title'))),
-                    h('div', { style: { paddingTop: 8 } },
-                      tab === 'history' ? h(HistoryTab, { t, peer, reload: () => {} }) : null,
-                      tab === 'files' ? h(FilesTab, { t, peer }) : null,
-                      tab === 'chat' ? h(ChatTab, { t, peer }) : null))))))
+                    : memoryTarget
+                      ? h(MemoryPanel, { t, ctx, peer, target: memoryTarget, onClose: () => setMemoryTarget(null) })
+                      : chatMode
+                        ? h('div', { className: 'pwv-chatmode' },
+                          h('div', { className: 'pwv-row' },
+                            h('span', { className: 'pwv-muted' }, `${t('chat.model')}: ${peer.remoteModel || '—'}`),
+                            h('span', { className: 'pwv-muted' }, `${t('chat.permission')}: ${t('chat.permissionValue')}`),
+                            h('span', { className: 'pwv-muted pwv-mono pwv-grow' }, peer.endpoint || '')),
+                          h(ChatTab, { t, peer, full: true }))
+                        : h('div', { className: 'pwv-browsemode' },
+                          h('div', { className: 'pwv-row', style: { marginBottom: 6 } },
+                            h('span', { className: 'pwv-muted pwv-mono' }, peer.endpoint || ''),
+                            h('span', { className: 'pwv-badge' }, peer.connected ? t('status.connected') : t('status.offline'))),
+                          h('div', { className: 'pwv-modaltabs' },
+                            h('button', { type: 'button', className: `pwv-tab${tab === 'history' ? ' active' : ''}`, onClick: () => setTab('history') }, t('history.title')),
+                            h('button', { type: 'button', className: `pwv-tab${tab === 'files' ? ' active' : ''}`, onClick: () => setTab('files') }, t('files.title')),
+                            peer.remoteTier >= 3
+                              ? h('button', { type: 'button', className: `pwv-tab${tab === 'chat' ? ' active' : ''}`, onClick: () => setTab('chat') }, t('chat.title'))
+                              : null),
+                          h('div', { style: { paddingTop: 8 } },
+                            tab === 'history' ? h(HistoryTab, { t, peer, reload: () => {}, onMemory: (target) => setMemoryTarget(target || {}) }) : null,
+                            tab === 'files' ? h(FilesTab, { t, peer }) : null,
+                            tab === 'chat' && peer.remoteTier >= 3 ? h(ChatTab, { t, peer }) : null))))))
     }
 
     // ------------------------------------------------------------------
@@ -903,6 +995,7 @@ window.__ModuleLoader__.load({
       const { state, error, reload } = usePublic(true, 4000)
       const [panel, setPanel] = useState(null)
       const [tab, setTab] = useState('history')
+      const [memoryTarget, setMemoryTarget] = useState(null)
 
       if (error && !state) {
         return h('div', { className: 'pwv-root pwv-dock' }, h(Styles), h('span', { className: 'pwv-err' }, error === 'network' ? t('error.network') : error))
@@ -951,6 +1044,7 @@ window.__ModuleLoader__.load({
             onClick: () => {
               setPanel(panel === entry.id ? null : entry.id)
               setTab('history')
+              setMemoryTarget(null)
             },
           },
           h('span', { className: `pwv-dot ${state.locked ? 'warn' : entry.connected ? 'on' : 'off'}` }),
@@ -978,23 +1072,30 @@ window.__ModuleLoader__.load({
               h('span', { className: `pwv-dot ${peer.connected ? 'on' : 'off'}` }),
               h('strong', { className: 'pwv-grow' }, peer.name),
               h('span', { className: 'pwv-badge' }, `${t('peers.grantedToMe')}: ${peer.remoteTier >= 0 ? t(`tier.${peer.remoteTier}`) : t('tier.unknown')}`),
-              h(Btn, { ghost: true, onClick: () => setPanel(null), title: t('common.close') }, '×')),
-            h('div', { className: 'pwv-tabs' },
-              h('button', { type: 'button', className: `pwv-tab${tab === 'history' ? ' active' : ''}`, onClick: () => setTab('history') }, t('history.title')),
-              h('button', { type: 'button', className: `pwv-tab${tab === 'files' ? ' active' : ''}`, onClick: () => setTab('files') }, t('files.title')),
-              h('button', { type: 'button', className: `pwv-tab${tab === 'chat' ? ' active' : ''}`, onClick: () => setTab('chat') }, t('chat.title'))),
+              peer.remoteTier >= 2
+                ? h(Btn, { ghost: true, onClick: () => setMemoryTarget({}) }, t('history.memory'))
+                : null,
+              h(Btn, { ghost: true, onClick: () => { setPanel(null); setMemoryTarget(null) }, title: t('common.close') }, '×')),
             !current.token
               ? h('div', { className: 'pwv-panelbody' }, h(UnlockForm, { t, onDone: reload }))
               : h('div', { className: 'pwv-panelbody' },
-                tab === 'history' ? h(HistoryTab, { t, peer, reload }) : null,
-                tab === 'files' ? h(FilesTab, { t, peer }) : null,
-                tab === 'chat' ? h(ChatTab, { t, peer }) : null))
+                memoryTarget
+                  ? h(MemoryPanel, { t, ctx, peer, target: memoryTarget, onClose: () => setMemoryTarget(null) })
+                  : h('div', null,
+                    h('div', { className: 'pwv-tabs' },
+                      h('button', { type: 'button', className: `pwv-tab${tab === 'history' ? ' active' : ''}`, onClick: () => setTab('history') }, t('history.title')),
+                      h('button', { type: 'button', className: `pwv-tab${tab === 'files' ? ' active' : ''}`, onClick: () => setTab('files') }, t('files.title')),
+                      h('button', { type: 'button', className: `pwv-tab${tab === 'chat' ? ' active' : ''}`, onClick: () => setTab('chat') }, t('chat.title'))),
+                    tab === 'history' ? h(HistoryTab, { t, peer, reload, onMemory: (target) => setMemoryTarget(target || {}) }) : null,
+                    tab === 'files' ? h(FilesTab, { t, peer }) : null,
+                    tab === 'chat' ? h(ChatTab, { t, peer }) : null)))
           : null)
     }
 
-    function HistoryTab({ t, peer, reload }) {
+    function HistoryTab({ t, peer, reload, onMemory }) {
       const [list, setList] = useState(null)
       const [detail, setDetail] = useState(null)
+      const [showArchived, setShowArchived] = useState(false)
       const [busy, setBusy] = useState(false)
       const [error, setError] = useState('')
 
@@ -1031,7 +1132,10 @@ window.__ModuleLoader__.load({
           h('div', { className: 'pwv-row', style: { marginBottom: 6 } },
             h(Btn, { ghost: true, onClick: () => setDetail(null) }, `← ${t('history.back')}`),
             h('strong', { className: 'pwv-grow' }, detail.title || detail.sessionId),
-            h('span', { className: 'pwv-badge' }, `${detail.messages.length} ${t('history.messages')}`)),
+            h('span', { className: 'pwv-badge' }, `${detail.messages.length} ${t('history.messages')}`),
+            onMemory
+              ? h(Btn, { onClick: () => onMemory({ sessionId: detail.sessionId, title: detail.title }), disabled: busy }, t('history.memory'))
+              : null),
           h(ErrorLine, { text: error }),
           h('div', { className: 'pwv-col' },
             detail.messages.length === 0 ? h('span', { className: 'pwv-muted' }, t('history.empty')) : null,
@@ -1042,28 +1146,146 @@ window.__ModuleLoader__.load({
 
       const groups = list && Array.isArray(list.workspaces) && list.workspaces.length > 0
         ? list.workspaces
-        : (list ? [{ id: 'all', title: '', path: '', sessions: list.sessions || [] }] : [])
+        : (list ? [{ id: 'all', title: '', path: '', sessions: list.sessions || [], archivedSessions: [] }] : [])
+      const activeGroups = groups.filter((group) => (group.sessions || []).length > 0)
+      const archivedGroups = groups.filter((group) => (group.archivedSessions || []).length > 0)
+      const archivedCount = list && Number.isInteger(list.archivedCount)
+        ? list.archivedCount
+        : archivedGroups.reduce((sum, group) => sum + group.archivedSessions.length, 0)
+
+      const sessionRow = (entry) => h('button', {
+        key: entry.id,
+        type: 'button',
+        className: 'pwv-item',
+        onClick: () => openSession(entry.id),
+      },
+      h('span', { className: `pwv-dot ${entry.running ? 'on' : 'off'}` }),
+      h('span', { className: 'pwv-grow', style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, entry.title),
+      entry.archived ? h('span', { className: 'pwv-badge' }, t('history.archived')) : null,
+      h('span', { className: 'pwv-muted pwv-nowrap' }, formatTime(entry.updatedAt)),
+      h('span', { className: 'pwv-badge' }, t('history.read')))
+
+      const groupBlock = (group, archived) => h('div', { key: `${group.id}:${archived ? 'archived' : 'active'}`, className: 'pwv-col' },
+        group.title
+          ? h('div', { className: 'pwv-row' },
+            h('span', { className: 'pwv-mono pwv-grow' }, group.title),
+            group.path ? h('span', { className: 'pwv-muted pwv-mono' }, group.path) : null,
+            onMemory ? h(Btn, { ghost: true, onClick: () => onMemory({ workspaceId: group.id, title: group.title }) }, t('history.memory')) : null)
+          : null,
+        h('div', { className: 'pwv-list' },
+          (archived ? group.archivedSessions : group.sessions).map(sessionRow)))
 
       return h('div', null,
         h('div', { className: 'pwv-row', style: { marginBottom: 6 } },
           h('strong', { className: 'pwv-grow' }, t('history.title')),
+          archivedCount > 0
+            ? h(Btn, { ghost: true, onClick: () => setShowArchived((value) => !value) }, `${t('history.archived')} (${archivedCount})`)
+            : null,
+          onMemory
+            ? h(Btn, { onClick: () => onMemory({}), disabled: busy }, t('history.memory'))
+            : null,
           h(Btn, { ghost: true, onClick: loadList, disabled: busy }, busy ? t('common.loading') : t('common.refresh'))),
         h(ErrorLine, { text: error }),
         !list ? (busy ? h('span', { className: 'pwv-muted' }, t('common.loading')) : null)
-          : groups.length === 0 || groups.every((group) => group.sessions.length === 0)
+          : activeGroups.length === 0 && archivedGroups.length === 0
             ? h('span', { className: 'pwv-muted' }, t('history.empty'))
-            : h('div', { className: 'pwv-col', style: { gap: 8 } },
-              groups.filter((group) => group.sessions.length > 0).map((group) => h('div', { key: group.id, className: 'pwv-col' },
-                group.title
-                  ? h('div', { className: 'pwv-row' },
-                    h('span', { className: 'pwv-mono pwv-grow' }, group.title),
-                    group.path ? h('span', { className: 'pwv-muted pwv-mono' }, group.path) : null)
-                  : null,
-                h('div', { className: 'pwv-list' },
-                  group.sessions.map((entry) => h('button', { key: entry.id, type: 'button', className: 'pwv-item', onClick: () => openSession(entry.id) },
-                    h('span', { className: `pwv-dot ${entry.running ? 'on' : 'off'}` }),
-                    h('span', { className: 'pwv-grow', style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, entry.title),
-                    h('span', { className: 'pwv-muted pwv-nowrap' }, formatTime(entry.updatedAt)))))))))
+            : h('div', { className: 'pwv-col', style: { gap: 10 } },
+              activeGroups.length === 0 ? h('span', { className: 'pwv-muted' }, t('history.empty')) : null,
+              activeGroups.map((group) => groupBlock(group, false)),
+              showArchived && archivedGroups.length > 0
+                ? h('div', { className: 'pwv-col', style: { gap: 8 } },
+                  h('div', { className: 'pwv-row' },
+                    h('strong', { className: 'pwv-grow' }, t('history.archived')),
+                    h('span', { className: 'pwv-badge' }, `${archivedCount}`)),
+                  archivedGroups.map((group) => groupBlock(group, true)))
+                : null))
+    }
+
+    function MemoryPanel({ t, ctx, peer, target, onClose }) {
+      const [chars, setChars] = useState('5000')
+      const [busy, setBusy] = useState(false)
+      const [error, setError] = useState('')
+      const [result, setResult] = useState(null)
+
+      async function run() {
+        const value = Number(chars)
+        if (!Number.isInteger(value) || value < 500 || value > 50000) {
+          setError(t('memory.length') + ': 500–50000')
+          return
+        }
+        setBusy(true)
+        setError('')
+        setResult(null)
+        try {
+          setResult(await post('memory/import', {
+            peerId: peer.id,
+            sessionId: target && target.sessionId ? target.sessionId : '',
+            workspaceId: target && target.workspaceId ? target.workspaceId : '',
+            maxChars: value,
+          }))
+        } catch (failure) {
+          setError(errorLabel(t, failure))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      function openCreated() {
+        if (!result) return
+        const navigation = ctx.get('uiWorkspace') || ctx.get('workspaces')
+        if (navigation && typeof navigation.openSession === 'function') {
+          navigation.openSession(result.sessionId)
+        } else if (ctx.workspaces && typeof ctx.workspaces.openSession === 'function') {
+          ctx.workspaces.openSession(result.sessionId)
+        }
+        if (onClose) onClose()
+      }
+
+      if (peer.remoteTier < 2) {
+        return h('div', null,
+          h('div', { className: 'pwv-row' },
+            h(Btn, { ghost: true, onClick: onClose }, `← ${t('common.close')}`),
+            h('strong', { className: 'pwv-grow' }, t('memory.title'))),
+          h('div', { className: 'pwv-muted' }, t('memory.needTier')))
+      }
+
+      return h('div', { className: 'pwv-col', style: { gap: 10 } },
+        h('div', { className: 'pwv-row' },
+          h(Btn, { ghost: true, onClick: onClose }, `← ${t('common.close')}`),
+          h('strong', { className: 'pwv-grow' }, t('memory.title'))),
+        h('div', { className: 'pwv-sub' }, t('memory.intro')),
+        h('div', { className: 'pwv-muted' }, `${t('memory.target')}: ${target && target.title ? target.title : t('memory.targetAll')}`),
+        h('div', { className: 'pwv-warn' }, t('memory.warning')),
+        h('div', { className: 'pwv-row' },
+          h('span', { className: 'pwv-muted' }, t('memory.length')),
+          [1000, 5000, 10000, 20000, 50000].map((value) => h(Btn, {
+            key: value,
+            ghost: String(value) !== chars,
+            onClick: () => setChars(String(value)),
+            disabled: busy,
+          }, String(value)))),
+        h('div', { className: 'pwv-row' },
+          h('span', { className: 'pwv-muted' }, t('memory.custom')),
+          h('div', { className: 'pwv-grow' },
+            h(Input, { value: chars, onChange: setChars, type: 'number', disabled: busy })),
+          h(Btn, { primary: true, onClick: run, disabled: busy }, busy ? t('memory.busy') : t('memory.import'))),
+        h(ErrorLine, { text: error }),
+        result
+          ? h('div', { className: 'pwv-col', style: { gap: 8 } },
+            h(OkLine, { text: t('memory.done', result.files.length) }),
+            h('div', { className: 'pwv-row' },
+              h('strong', { className: 'pwv-grow' }, t('memory.summary')),
+              h('span', { className: 'pwv-badge' }, `${result.source.chars} / ${result.source.sourceChars}`)),
+            h('pre', { className: 'pwv-pre' }, result.summary),
+            h('div', { className: 'pwv-muted' }, `${t('memory.files')}: ${result.files.length > 0 ? result.files.join(', ') : t('common.none')}`),
+            result.skipped.length > 0
+              ? h('div', { className: 'pwv-muted' }, `${t('memory.skipped')}: ${result.skipped.map((entry) => `${entry.path} (${entry.reason})`).join(', ')}`)
+              : null,
+            result.promptError ? h('div', { className: 'pwv-muted' }, result.promptError) : null,
+            h('div', { className: 'pwv-row' },
+              h(Btn, { primary: true, onClick: openCreated }, t('memory.open')),
+              h(Btn, { ghost: true, onClick: onClose }, t('common.close'))))
+          : null)
     }
 
     function FilesTab({ t, peer }) {
@@ -1222,12 +1444,29 @@ window.__ModuleLoader__.load({
               entry.size != null ? h('span', { className: 'pwv-muted pwv-nowrap' }, formatBytes(entry.size)) : null))))
     }
 
-    function ChatTab({ t, peer }) {
-      const [messages, setMessages] = useState([])
+    function ChatTab({ t, peer, full, workspaceId }) {
+      const [messages, setMessages] = useState(() => (chatMemory.peerId === peer.id ? chatMemory.messages : []))
       const [text, setText] = useState('')
       const [busy, setBusy] = useState(false)
       const [error, setError] = useState('')
       const listRef = useRef(null)
+
+      useEffect(() => {
+        if (chatMemory.peerId !== peer.id) {
+          chatMemory.peerId = peer.id
+          chatMemory.messages = []
+          setMessages([])
+        }
+      }, [peer.id])
+
+      function applyMessages(updater) {
+        setMessages((current) => {
+          const next = updater(current)
+          chatMemory.peerId = peer.id
+          chatMemory.messages = next
+          return next
+        })
+      }
 
       useEffect(() => {
         if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight
@@ -1244,21 +1483,23 @@ window.__ModuleLoader__.load({
         if (!message || busy) return
         setText('')
         setError('')
-        setMessages((current) => [...current, { role: 'user', text: message }])
+        applyMessages((current) => [...current, { role: 'user', text: message }])
         setBusy(true)
         try {
-          const data = await post('remote/chat', { peerId: peer.id, message })
-          setMessages((current) => [...current, { role: 'assistant', text: data.reply, meta: data.reason }])
+          const data = await post('remote/chat', { peerId: peer.id, message, workspaceId: workspaceId || '' })
+          applyMessages((current) => [...current, { role: 'assistant', text: data.reply, meta: data.reason }])
         } catch (failure) {
-          setMessages((current) => [...current, { role: 'error', text: errorLabel(t, failure) }])
+          applyMessages((current) => [...current, { role: 'error', text: errorLabel(t, failure) }])
         } finally {
           setBusy(false)
         }
       }
 
-      return h('div', null,
-        h('div', { className: 'pwv-chat', ref: listRef },
-          messages.length === 0 && !busy ? h('span', { className: 'pwv-muted' }, t('chat.empty')) : null,
+      return h('div', { className: full ? 'pwv-chatfull' : null },
+        h('div', { className: `pwv-chat${full ? ' pwv-chat-grow' : ''}`, ref: listRef },
+          messages.length === 0 && !busy
+            ? h('span', { className: 'pwv-muted' }, full ? t('chat.fullEmpty') : t('chat.empty'))
+            : null,
           messages.map((message, index) => h('div', { key: index, className: `pwv-msg ${message.role}` }, message.text)),
           busy ? h('div', { className: 'pwv-muted' }, t('chat.busy')) : null),
         h(ErrorLine, { text: error }),
