@@ -2199,67 +2199,55 @@ window.__ModuleLoader__.load({
         }
         const t = ctx.locale.bind(NS)
         try {
-          ctx.effect(
-            () => ctx.slots.register(
-              {
-                name: 'settings.section',
-                id: 'peerweave',
-                order: 60,
-                label: () => t('section.title'),
-                locale: NS,
-              },
-              (props) => h(SettingsPage, { ctx, close: props && props.close }),
-            ),
-            'peerweave: settings section',
-          )
+          ctx.slots.inject('settings.section', () => ctx.slots.register(
+            {
+              name: 'settings.section',
+              id: 'peerweave',
+              order: 60,
+              label: () => t('section.title'),
+              locale: NS,
+            },
+            (props) => h(SettingsPage, { ctx, close: props && props.close }),
+          ))
         } catch (error) {
           console.error('[peerweave] settings section registration failed', error)
         }
         try {
-          ctx.effect(
-            () => ctx.slots.register(
-              {
-                name: 'conversation.composer.dock',
-                id: 'peerweave-dock',
-                order: 20,
-                locale: NS,
-              },
-              () => h(Dock, { ctx }),
-            ),
-            'peerweave: workspace dock',
-          )
+          ctx.slots.inject('conversation.composer.dock', () => ctx.slots.register(
+            {
+              name: 'conversation.composer.dock',
+              id: 'peerweave-dock',
+              order: 20,
+              locale: NS,
+            },
+            () => h(Dock, { ctx }),
+          ))
         } catch (error) {
           console.error('[peerweave] dock registration failed', error)
         }
         try {
-          ctx.effect(
-            () => ctx.slots.register(
-              {
-                name: 'sidebar.footer.action',
-                id: 'peerweave',
-                order: -15,
-                locale: NS,
-              },
-              (props) => h(PeerSidebarEntry, { ctx, wide: props && props.wide }),
-            ),
-            'peerweave: sidebar entry',
-          )
+          ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register(
+            {
+              name: 'sidebar.footer.action',
+              id: 'peerweave',
+              order: -15,
+              locale: NS,
+            },
+            (props) => h(PeerSidebarEntry, { ctx, wide: props && props.wide }),
+          ))
         } catch (error) {
           console.error('[peerweave] sidebar entry registration failed', error)
         }
         try {
-          ctx.effect(
-            () => ctx.slots.register(
-              {
-                name: 'shell.overlay',
-                id: 'peerweave-browser',
-                order: 30,
-                locale: NS,
-              },
-              () => h(PeerOverlay, { ctx }),
-            ),
-            'peerweave: overlay browser',
-          )
+          ctx.slots.inject('shell.overlay', () => ctx.slots.register(
+            {
+              name: 'shell.overlay',
+              id: 'peerweave-browser',
+              order: 30,
+              locale: NS,
+            },
+            () => h(PeerOverlay, { ctx }),
+          ))
         } catch (error) {
           console.error('[peerweave] overlay registration failed', error)
         }
