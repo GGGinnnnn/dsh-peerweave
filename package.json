@@ -1,7 +1,6 @@
 {
   "name": "dsh-peerweave",
   "version": "1.1.1",
-  "private": true,
   "type": "module",
   "description": "Peerweave: encrypted peer-to-peer links between DeepSeek Harness instances with password-guarded, tiered access.",
   "keywords": [
@@ -40,6 +39,9 @@
   ],
   "bin": {
     "dsh-peerweave-relay": "./relay.js"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "engines": {
     "node": ">=20"

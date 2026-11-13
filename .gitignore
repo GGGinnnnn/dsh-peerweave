@@ -8,3 +8,4 @@ peerweave-imports/
 *.log
 .DS_Store
 Thumbs.db
+*.tgz
