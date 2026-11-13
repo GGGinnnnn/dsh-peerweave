@@ -121,6 +121,7 @@ window.__ModuleLoader__.load({
       'net.bindV4': 'IPv4 only (0.0.0.0)',
       'net.bindV6': 'IPv6 + IPv4 dual-stack (::)',
       'net.bindHint': 'Dual-stack lets IPv6 peers connect; the invite address still comes from “Address peers should dial”.',
+      'net.allWorkspaces': 'History is grouped by every workspace registered on the peer; files let you pick a workspace root. No single shared-root selection is required.',
       'net.reverse': 'Reverse SSH (this machine behind NAT)',
       'net.reverseEnable': 'Run an outbound ssh -R tunnel to a VPS',
       'net.reverseTarget': 'SSH target (user@vps)',
@@ -179,6 +180,7 @@ window.__ModuleLoader__.load({
       'history.back': 'Back to sessions',
       'history.messages': 'messages',
       'files.title': 'Shared files',
+      'files.workspaces': 'Workspaces',
       'files.empty': 'This folder is empty.',
       'files.root': 'Root',
       'files.up': 'Up',
@@ -306,6 +308,7 @@ window.__ModuleLoader__.load({
       'net.bindV4': '仅 IPv4（0.0.0.0）',
       'net.bindV6': 'IPv6 + IPv4 双栈（::）',
       'net.bindHint': '双栈允许 IPv6 节点直连；邀请码里的地址仍来自“供对方连接的地址”。',
+      'net.allWorkspaces': '历史记录按对方注册的全部工作区分组；文件可先选择工作区根目录。不需要在设置里只选一个共享工作区。',
       'net.reverse': '反向 SSH（本机在 NAT 后）',
       'net.reverseEnable': '主动向 VPS 建立 ssh -R 隧道',
       'net.reverseTarget': 'SSH 目标（user@vps）',
@@ -364,6 +367,7 @@ window.__ModuleLoader__.load({
       'history.back': '返回会话列表',
       'history.messages': '条消息',
       'files.title': '共享文件',
+      'files.workspaces': '工作区',
       'files.empty': '这个文件夹是空的。',
       'files.root': '根目录',
       'files.up': '上一级',
@@ -386,6 +390,23 @@ window.__ModuleLoader__.load({
     // In-memory page session (the unlock token never touches storage)
     // ------------------------------------------------------------------
     const session = { token: null, expiresAt: 0, listeners: new Set() }
+
+    const peerPanel = { open: false, peerId: null, listeners: new Set() }
+
+    function setPeerPanel(next) {
+      Object.assign(peerPanel, next)
+      for (const listener of [...peerPanel.listeners]) listener()
+    }
+
+    function usePeerPanel() {
+      const [, setRevision] = useState(0)
+      useEffect(() => {
+        const bump = () => setRevision((value) => value + 1)
+        peerPanel.listeners.add(bump)
+        return () => peerPanel.listeners.delete(bump)
+      }, [])
+      return peerPanel
+    }
 
     function setSession(token, expiresAt) {
       session.token = token || null
@@ -522,6 +543,7 @@ window.__ModuleLoader__.load({
       '.pwv-list{display:flex;flex-direction:column;gap:1px}',
       '.pwv-item{display:flex;gap:8px;align-items:center;padding:5px 7px;border-radius:6px;cursor:pointer;border:0;background:transparent;text-align:left;color:inherit;font:inherit;width:100%}',
       '.pwv-item:hover{background:var(--dsw-alias-interactive-bg-hover)}',
+      '.pwv-item.active{background:var(--dsw-alias-interactive-bg-hover)}',
       '.pwv-pre{white-space:pre-wrap;word-break:break-word;background:var(--dsw-alias-bg-layer-2);border-radius:8px;padding:9px;max-height:260px;overflow:auto;font-family:ui-monospace,Consolas,monospace;font-size:12px;margin:0}',
       '.pwv-tabs{display:flex;gap:2px;border-bottom:1px solid var(--dsw-alias-border-l1);padding:0 8px}',
       '.pwv-tab{font:inherit;font-size:12px;background:transparent;border:0;border-bottom:2px solid transparent;padding:7px 8px;cursor:pointer;color:var(--dsw-alias-label-secondary)}',
@@ -545,6 +567,17 @@ window.__ModuleLoader__.load({
       '.pwv-tutorial{margin-top:6px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;padding:0 8px}',
       '.pwv-tutorial summary{cursor:pointer;font-size:12px;color:var(--dsw-alias-label-secondary);padding:7px 0}',
       '.pwv-guide-body{white-space:pre-line;font-size:12px;color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-bg-layer-2);border-radius:8px;padding:8px;margin:0 0 8px;line-height:1.5}',
+      '.pwv-sideentry{display:flex;align-items:center;min-height:36px}',
+      '.pwv-sidebtn{display:flex;align-items:center;gap:8px;width:100%;height:36px;padding:0 8px;border:0;border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary);font:inherit;font-size:14px;line-height:20px;cursor:pointer;text-align:start}',
+      '.pwv-sidebtn:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-primary)}',
+      '.pwv-sidebtn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px}',
+      '.pwv-overlay{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.38);display:flex;align-items:center;justify-content:center;padding:24px}',
+      '.pwv-modal{display:flex;flex-direction:column;width:min(1120px,96vw);height:min(780px,90vh);background:var(--dsw-alias-bg-base);border:1px solid var(--dsw-alias-border-l1);border-radius:14px;box-shadow:0 24px 64px rgba(0,0,0,.28);overflow:hidden}',
+      '.pwv-modalhead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--dsw-alias-border-l1)}',
+      '.pwv-modalbody{display:flex;flex:1;min-height:0}',
+      '.pwv-peerlist{width:230px;flex:0 0 230px;border-right:1px solid var(--dsw-alias-border-l1);overflow:auto;padding:8px}',
+      '.pwv-modalcontent{flex:1;min-width:0;overflow:auto;padding:12px}',
+      '.pwv-modaltabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--dsw-alias-border-l1)}',
     ].join('')
 
     function Styles() {
@@ -749,6 +782,84 @@ window.__ModuleLoader__.load({
     }
 
     // ------------------------------------------------------------------
+    // Sidebar entry + full peer workspace browser
+    // ------------------------------------------------------------------
+    function PeerSidebarEntry({ ctx, wide }) {
+      const t = useT(ctx)
+      const { state } = usePublic(true, 6000)
+      const peers = state && Array.isArray(state.peers) ? state.peers : []
+      const connected = peers.some((entry) => entry.connected)
+      const label = peers.length === 1
+        ? peers[0].name
+        : peers.length > 1
+          ? `${t('dock.title')} · ${peers.length}`
+          : t('dock.title')
+      return h('div', { className: 'pwv-sideentry' },
+        h('button', {
+          type: 'button',
+          className: 'pwv-sidebtn',
+          title: peers.length === 1 ? `${peers[0].name} — ${t('section.title')}` : t('section.title'),
+          onClick: () => setPeerPanel({ open: true }),
+        },
+        h('span', { className: `pwv-dot ${state && state.locked ? 'warn' : connected ? 'on' : 'off'}` }),
+        wide === false ? null : h('span', { className: 'pwv-nowrap' }, label)))
+    }
+
+    function PeerOverlay({ ctx }) {
+      const t = useT(ctx)
+      const panel = usePeerPanel()
+      const current = useSession()
+      const { state } = usePublic(panel.open, 4000)
+      const [tab, setTab] = useState('history')
+
+      if (!panel.open) return null
+      const peers = state && Array.isArray(state.peers) ? state.peers : []
+      const peer = peers.find((entry) => entry.id === panel.peerId) || peers[0] || null
+      return h('div', {
+        className: 'pwv-overlay',
+        onMouseDown: (event) => {
+          if (event.target === event.currentTarget) setPeerPanel({ open: false })
+        },
+      },
+      h('div', { className: 'pwv-modal', role: 'dialog', 'aria-label': t('section.title') },
+        h(Styles),
+        h('div', { className: 'pwv-modalhead' },
+          h('strong', { className: 'pwv-grow' }, t('section.title')),
+          h('span', { className: 'pwv-muted' }, state && state.locked ? t('status.locked') : `${peers.length} ${t('peers.title')}`),
+          h(Btn, { ghost: true, onClick: () => setPeerPanel({ open: false }), title: t('common.close') }, '×')),
+        h('div', { className: 'pwv-modalbody' },
+          h('div', { className: 'pwv-peerlist' },
+            peers.length === 0 ? h('div', { className: 'pwv-muted' }, t('peers.empty')) : null,
+            peers.map((entry) => h('button', {
+              key: entry.id,
+              type: 'button',
+              className: `pwv-item${peer && peer.id === entry.id ? ' active' : ''}`,
+              onClick: () => setPeerPanel({ peerId: entry.id }),
+            },
+            h('span', { className: `pwv-dot ${entry.connected ? 'on' : 'off'}` }),
+            h('span', { className: 'pwv-grow', style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, entry.name),
+            h('span', { className: 'pwv-badge' }, t(`tier.short.${entry.remoteTier >= 0 ? entry.remoteTier : 0}`))))),
+          h('div', { className: 'pwv-modalcontent' },
+            !state ? h('div', { className: 'pwv-muted' }, t('common.loading'))
+              : !state.passwordSet ? h(SetupCard, { t, onDone: () => {} })
+                : !current.token || state.locked ? h(UnlockForm, { t, onDone: () => {} })
+                  : !peer ? h('div', { className: 'pwv-muted' }, t('peers.empty'))
+                  : h('div', null,
+                    h('div', { className: 'pwv-row', style: { marginBottom: 6 } },
+                      h('strong', { className: 'pwv-grow' }, peer.name),
+                      h('span', { className: 'pwv-muted pwv-mono' }, peer.endpoint || ''),
+                      h('span', { className: 'pwv-badge' }, peer.connected ? t('status.connected') : t('status.offline'))),
+                    h('div', { className: 'pwv-modaltabs' },
+                      h('button', { type: 'button', className: `pwv-tab${tab === 'history' ? ' active' : ''}`, onClick: () => setTab('history') }, t('history.title')),
+                      h('button', { type: 'button', className: `pwv-tab${tab === 'files' ? ' active' : ''}`, onClick: () => setTab('files') }, t('files.title')),
+                      h('button', { type: 'button', className: `pwv-tab${tab === 'chat' ? ' active' : ''}`, onClick: () => setTab('chat') }, t('chat.title'))),
+                    h('div', { style: { paddingTop: 8 } },
+                      tab === 'history' ? h(HistoryTab, { t, peer, reload: () => {} }) : null,
+                      tab === 'files' ? h(FilesTab, { t, peer }) : null,
+                      tab === 'chat' ? h(ChatTab, { t, peer }) : null))))))
+    }
+
+    // ------------------------------------------------------------------
     // Dock: connected DSHs in the workspace
     // ------------------------------------------------------------------
     function Dock({ ctx }) {
@@ -894,33 +1005,51 @@ window.__ModuleLoader__.load({
               h('div', null, message.text)))))
       }
 
+      const groups = list && Array.isArray(list.workspaces) && list.workspaces.length > 0
+        ? list.workspaces
+        : (list ? [{ id: 'all', title: '', path: '', sessions: list.sessions || [] }] : [])
+
       return h('div', null,
         h('div', { className: 'pwv-row', style: { marginBottom: 6 } },
           h('strong', { className: 'pwv-grow' }, t('history.title')),
           h(Btn, { ghost: true, onClick: loadList, disabled: busy }, busy ? t('common.loading') : t('common.refresh'))),
         h(ErrorLine, { text: error }),
         !list ? (busy ? h('span', { className: 'pwv-muted' }, t('common.loading')) : null)
-          : list.sessions.length === 0 ? h('span', { className: 'pwv-muted' }, t('history.empty'))
-            : h('div', { className: 'pwv-list' },
-              list.sessions.map((entry) => h('button', { key: entry.id, type: 'button', className: 'pwv-item', onClick: () => openSession(entry.id) },
-                h('span', { className: `pwv-dot ${entry.running ? 'on' : 'off'}` }),
-                h('span', { className: 'pwv-grow', style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, entry.title),
-                h('span', { className: 'pwv-muted pwv-nowrap' }, formatTime(entry.updatedAt))))))
+          : groups.length === 0 || groups.every((group) => group.sessions.length === 0)
+            ? h('span', { className: 'pwv-muted' }, t('history.empty'))
+            : h('div', { className: 'pwv-col', style: { gap: 8 } },
+              groups.filter((group) => group.sessions.length > 0).map((group) => h('div', { key: group.id, className: 'pwv-col' },
+                group.title
+                  ? h('div', { className: 'pwv-row' },
+                    h('span', { className: 'pwv-mono pwv-grow' }, group.title),
+                    group.path ? h('span', { className: 'pwv-muted pwv-mono' }, group.path) : null)
+                  : null,
+                h('div', { className: 'pwv-list' },
+                  group.sessions.map((entry) => h('button', { key: entry.id, type: 'button', className: 'pwv-item', onClick: () => openSession(entry.id) },
+                    h('span', { className: `pwv-dot ${entry.running ? 'on' : 'off'}` }),
+                    h('span', { className: 'pwv-grow', style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, entry.title),
+                    h('span', { className: 'pwv-muted pwv-nowrap' }, formatTime(entry.updatedAt)))))))))
     }
 
     function FilesTab({ t, peer }) {
+      const [workspaces, setWorkspaces] = useState(null)
+      const [workspace, setWorkspace] = useState(null)
       const [listing, setListing] = useState(null)
       const [file, setFile] = useState(null)
       const [busy, setBusy] = useState(false)
       const [error, setError] = useState('')
       const [note, setNote] = useState('')
 
-      const load = useCallback(async (path) => {
+      const loadWorkspaces = useCallback(async () => {
         setBusy(true)
         setError('')
         setFile(null)
+        setListing(null)
         try {
-          setListing(await post('remote/files/list', { peerId: peer.id, path: path || '' }))
+          const data = await post('remote/files/workspaces', { peerId: peer.id })
+          const list = (data && data.workspaces) || []
+          setWorkspaces(list)
+          if (list.length === 1) setWorkspace(list[0])
         } catch (failure) {
           setError(errorLabel(t, failure))
         } finally {
@@ -928,16 +1057,36 @@ window.__ModuleLoader__.load({
         }
       }, [peer.id, t])
 
+      const load = useCallback(async (path, target) => {
+        const current = target || workspace
+        if (!current) return
+        setBusy(true)
+        setError('')
+        setFile(null)
+        try {
+          setListing(await post('remote/files/list', { peerId: peer.id, path: path || '', workspaceId: current.id }))
+        } catch (failure) {
+          setError(errorLabel(t, failure))
+        } finally {
+          setBusy(false)
+        }
+      }, [peer.id, t, workspace])
+
       useEffect(() => {
-        load('')
-      }, [load])
+        loadWorkspaces()
+      }, [loadWorkspaces])
+
+      useEffect(() => {
+        if (workspace) load('', workspace)
+      }, [workspace && workspace.id])
 
       async function openFile(path) {
+        if (!workspace) return
         setBusy(true)
         setError('')
         setNote('')
         try {
-          setFile(await post('remote/files/read', { peerId: peer.id, path }))
+          setFile(await post('remote/files/read', { peerId: peer.id, path, workspaceId: workspace.id }))
         } catch (failure) {
           if (failure.code === 'file-needs-transfer' || failure.code === 'file-too-large') {
             setFile({
@@ -955,17 +1104,26 @@ window.__ModuleLoader__.load({
       }
 
       async function copyLocal(path) {
+        if (!workspace) return
         setBusy(true)
         setError('')
         setNote('')
         try {
-          const result = await post('remote/copy', { peerId: peer.id, path })
+          const result = await post('remote/copy', { peerId: peer.id, path, workspaceId: workspace.id })
           setNote(t('files.copied', result.localPath))
         } catch (failure) {
           setError(errorLabel(t, failure))
         } finally {
           setBusy(false)
         }
+      }
+
+      function backToWorkspaces() {
+        setWorkspace(null)
+        setListing(null)
+        setFile(null)
+        setError('')
+        setNote('')
       }
 
       if (file) {
@@ -985,12 +1143,33 @@ window.__ModuleLoader__.load({
               : h('pre', { className: 'pwv-pre' }, body || ''))
       }
 
+      if (!workspace) {
+        return h('div', null,
+          h('div', { className: 'pwv-row', style: { marginBottom: 6 } },
+            h('strong', { className: 'pwv-grow' }, t('files.workspaces')),
+            h(Btn, { ghost: true, onClick: loadWorkspaces, disabled: busy }, busy ? t('common.loading') : t('common.refresh'))),
+          h(ErrorLine, { text: error }),
+          !workspaces ? (busy ? h('span', { className: 'pwv-muted' }, t('common.loading')) : null)
+            : workspaces.length === 0 ? h('span', { className: 'pwv-muted' }, t('files.empty'))
+              : h('div', { className: 'pwv-list' },
+                workspaces.map((entry) => h('button', {
+                  key: entry.id,
+                  type: 'button',
+                  className: 'pwv-item',
+                  onClick: () => { setWorkspace(entry); setError(''); setNote('') },
+                },
+                h('span', { className: 'pwv-mono' }, '📁'),
+                h('span', { className: 'pwv-grow' }, entry.title),
+                h('span', { className: 'pwv-muted pwv-mono pwv-nowrap' }, entry.path)))))
+      }
+
       return h('div', null,
         h('div', { className: 'pwv-row', style: { marginBottom: 6 } },
-          h(Btn, { ghost: true, onClick: () => load(listing ? listing.parent : ''), disabled: busy || !listing || listing.path === '' }, `← ${t('files.up')}`),
-          h('strong', { className: 'pwv-grow pwv-mono' }, listing ? `/${listing.path || ''}` : ''),
+          h(Btn, { ghost: true, onClick: backToWorkspaces, disabled: busy }, `← ${t('files.workspaces')}`),
+          h(Btn, { ghost: true, onClick: () => load(listing ? listing.parent : '', workspace), disabled: busy || !listing || listing.path === '' }, `← ${t('files.up')}`),
+          h('strong', { className: 'pwv-grow pwv-mono' }, `${workspace.title}/${listing ? listing.path || '' : ''}`),
           h('span', { className: 'pwv-badge' }, `${t('files.limit')}: ${formatBytes(listing ? listing.limitBytes : 0)}`),
-          h(Btn, { ghost: true, onClick: () => load(listing ? listing.path : ''), disabled: busy }, t('common.refresh'))),
+          h(Btn, { ghost: true, onClick: () => load(listing ? listing.path : '', workspace), disabled: busy }, t('common.refresh'))),
         h(ErrorLine, { text: error }),
         h(OkLine, { text: note }),
         !listing ? (busy ? h('span', { className: 'pwv-muted' }, t('common.loading')) : null)
@@ -1001,7 +1180,7 @@ window.__ModuleLoader__.load({
                 type: 'button',
                 className: 'pwv-item',
                 disabled: entry.type === 'link',
-                onClick: () => (entry.type === 'dir' ? load(entry.path) : openFile(entry.path)),
+                onClick: () => (entry.type === 'dir' ? load(entry.path, workspace) : openFile(entry.path)),
               },
               h('span', { className: 'pwv-mono' }, entry.type === 'dir' ? '📁' : entry.type === 'file' ? '📄' : '🔗'),
               h('span', { className: 'pwv-grow', style: { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, entry.name),
@@ -1381,7 +1560,6 @@ window.__ModuleLoader__.load({
     function SharingSettings({ t, state, onChanged }) {
       const [mib, setMib] = useState(String(Math.round((state.settings.maxFileBytes || MI_B) / MI_B * 100) / 100))
       const [listenPort, setListenPort] = useState(String(state.settings.listenPort || ''))
-      const [sharedRoot, setSharedRoot] = useState(state.settings.sharedRoot || '')
       const [displayName, setDisplayName] = useState(state.settings.displayName || '')
       const [advertiseHost, setAdvertiseHost] = useState(state.settings.advertiseHost || '')
       const [autoConnect, setAutoConnect] = useState(Boolean(state.settings.autoConnect))
@@ -1407,7 +1585,6 @@ window.__ModuleLoader__.load({
               maxFileBytes: bytes,
               listenPort: Number(listenPort),
               bindHost,
-              sharedRoot: sharedRoot.trim(),
               displayName: displayName.trim(),
               advertiseHost: advertiseHost.trim(),
               autoConnect,
@@ -1428,7 +1605,7 @@ window.__ModuleLoader__.load({
         h('div', { className: 'pwv-row' },
           h(Field, { label: t('settings.maxFile'), hint: t('settings.maxFileHint') }, h(Input, { value: mib, onChange: setMib, type: 'number' })),
           h(Field, { label: t('settings.listenPort') }, h(Input, { value: listenPort, onChange: setListenPort, type: 'number' }))),
-        h(Field, { label: t('settings.sharedRoot'), hint: `${t('settings.sharedRootHint')} ${state.settings.sharedRoot || ''}` }, h(Input, { value: sharedRoot, onChange: setSharedRoot })),
+        h('div', { className: 'pwv-muted' }, t('net.allWorkspaces')),
         h('div', { className: 'pwv-row' },
           h(Field, { label: t('settings.displayName') }, h(Input, { value: displayName, onChange: setDisplayName })),
           h(Field, { label: t('settings.advertiseHost'), hint: t('settings.advertiseHostHint') }, h(Input, { value: advertiseHost, onChange: setAdvertiseHost }))),
@@ -1736,36 +1913,80 @@ window.__ModuleLoader__.load({
     return {
       inject: ['slots', 'locale'],
       apply(ctx) {
-        ctx.effect(
-          () => ctx.locale.register(NS, { en: EN, zh: ZH }),
-          'peerweave: dictionaries',
-        )
+        try {
+          ctx.effect(
+            () => ctx.locale.register(NS, { en: EN, zh: ZH }),
+            'peerweave: dictionaries',
+          )
+        } catch (error) {
+          console.error('[peerweave] locale registration failed', error)
+        }
         const t = ctx.locale.bind(NS)
-        ctx.effect(
-          () => ctx.slots.register(
-            {
-              name: 'settings.section',
-              id: 'peerweave',
-              order: 60,
-              label: () => t('section.title'),
-              locale: NS,
-            },
-            (props) => h(SettingsPage, { ctx, close: props && props.close }),
-          ),
-          'peerweave: settings section',
-        )
-        ctx.effect(
-          () => ctx.slots.register(
-            {
-              name: 'conversation.composer.dock',
-              id: 'peerweave-dock',
-              order: 20,
-              locale: NS,
-            },
-            () => h(Dock, { ctx }),
-          ),
-          'peerweave: workspace dock',
-        )
+        try {
+          ctx.effect(
+            () => ctx.slots.register(
+              {
+                name: 'settings.section',
+                id: 'peerweave',
+                order: 60,
+                label: () => t('section.title'),
+                locale: NS,
+              },
+              (props) => h(SettingsPage, { ctx, close: props && props.close }),
+            ),
+            'peerweave: settings section',
+          )
+        } catch (error) {
+          console.error('[peerweave] settings section registration failed', error)
+        }
+        try {
+          ctx.effect(
+            () => ctx.slots.register(
+              {
+                name: 'conversation.composer.dock',
+                id: 'peerweave-dock',
+                order: 20,
+                locale: NS,
+              },
+              () => h(Dock, { ctx }),
+            ),
+            'peerweave: workspace dock',
+          )
+        } catch (error) {
+          console.error('[peerweave] dock registration failed', error)
+        }
+        try {
+          ctx.effect(
+            () => ctx.slots.register(
+              {
+                name: 'sidebar.footer.action',
+                id: 'peerweave',
+                order: -15,
+                locale: NS,
+              },
+              (props) => h(PeerSidebarEntry, { ctx, wide: props && props.wide }),
+            ),
+            'peerweave: sidebar entry',
+          )
+        } catch (error) {
+          console.error('[peerweave] sidebar entry registration failed', error)
+        }
+        try {
+          ctx.effect(
+            () => ctx.slots.register(
+              {
+                name: 'shell.overlay',
+                id: 'peerweave-browser',
+                order: 30,
+                locale: NS,
+              },
+              () => h(PeerOverlay, { ctx }),
+            ),
+            'peerweave: overlay browser',
+          )
+        } catch (error) {
+          console.error('[peerweave] overlay registration failed', error)
+        }
       },
     }
   },

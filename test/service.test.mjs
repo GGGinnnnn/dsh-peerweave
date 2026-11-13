@@ -97,6 +97,12 @@ function createFakes(workspace, label) {
   }
   const registry = {
     archived: [],
+    list() {
+      return [{ id: `ws-${label}`, path: workspace, title: `Workspace ${label}` }]
+    },
+    get(id) {
+      return id === `ws-${label}` ? { id, path: workspace, title: `Workspace ${label}` } : undefined
+    },
     async archiveSession(sessionId) {
       this.archived.push(sessionId)
     },
@@ -191,21 +197,26 @@ try {
   assert.equal(prepared1.delayMs, 0)
   await A.service.commitGrant(peerBOnA.id, 1, prepared1.nonce, PASS_A, PEER_A_IP)
   const history = await B.service.remoteCall(peerAOnB.id, 'history.list', {})
-  assert.equal(history.sessions.length, 1, 'only sessions inside the shared root are exposed')
+  assert.equal(history.sessions.length, 2, 'all sessions across workspaces are exposed')
+  assert.ok(Array.isArray(history.workspaces) && history.workspaces.length >= 1)
+  assert.equal(history.workspaces[0].title, 'Workspace alpha')
   assert.equal(history.sessions[0].title, 'Fixture alpha')
   const transcript = await B.service.remoteCall(peerAOnB.id, 'history.read', { sessionId: history.sessions[0].id })
   assert.equal(transcript.messages.length, 2)
   assert.equal(transcript.messages[0].text, 'hello from alpha')
-  log('tier 1 history read works and filters by shared root')
+  log('tier 1 history exposes all workspaces, grouped by workspace')
   await expectFailure('tier 1 files', B.service.remoteCall(peerAOnB.id, 'files.list', { path: '' }), 'permission-denied')
 
   const prepared2 = await A.service.prepareGrant(peerBOnA.id, 2, PASS_A, PEER_A_IP)
   await A.service.commitGrant(peerBOnA.id, 2, prepared2.nonce, PASS_A, PEER_A_IP)
-  const listing = await B.service.remoteCall(peerAOnB.id, 'files.list', { path: '' })
+  const fileWorkspaces = await B.service.remoteCall(peerAOnB.id, 'files.workspaces', {})
+  assert.equal(fileWorkspaces.workspaces[0].title, 'Workspace alpha')
+  const listing = await B.service.remoteCall(peerAOnB.id, 'files.list', { path: '', workspaceId: fileWorkspaces.workspaces[0].id })
   assert.ok(listing.entries.some((entry) => entry.name === 'hello.txt'))
   assert.ok(listing.entries.some((entry) => entry.name === 'sub' && entry.type === 'dir'))
-  const file = await B.service.remoteCall(peerAOnB.id, 'files.read', { path: 'sub/inner.txt' })
+  const file = await B.service.remoteCall(peerAOnB.id, 'files.read', { path: 'sub/inner.txt', workspaceId: fileWorkspaces.workspaces[0].id })
   assert.equal(file.text, 'inner file\n')
+  log('tier 2 file access selects any workspace')
   await expectFailure('traversal', B.service.remoteCall(peerAOnB.id, 'files.read', { path: '../workspace-b/bravo.txt' }), 'invalid-path')
   log('tier 2 file list/read works and traversal is refused')
 
@@ -219,6 +230,8 @@ try {
   const copied = await A.service.copyFromPeer(peerBOnA.id, 'bravo.txt')
   assert.equal(await readFile(copied.localPath, 'utf8'), 'bravo file\n')
   assert.ok(copied.localPath.includes('peerweave-imports'))
+  const copiedFromWorkspace = await A.service.copyFromPeer(peerBOnA.id, 'bravo.txt', 'ws-bravo')
+  assert.equal(await readFile(copiedFromWorkspace.localPath, 'utf8'), 'bravo file\n')
   log('copy from the peer into the local workspace works')
 
   await A.service.updateSettings({ maxFileBytes: 64 * 1024 * 1024 }, PASS_A, PEER_A_IP)
