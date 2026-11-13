@@ -1,0 +1,6 @@
+- insert:
+    - id: peerweave
+      name: dsh-peerweave
+      config:
+        listenPort: 41337
+        maxFileBytes: 16777216

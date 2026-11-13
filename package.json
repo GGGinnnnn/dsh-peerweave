@@ -1,0 +1,55 @@
+{
+  "name": "dsh-peerweave",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Peerweave: encrypted peer-to-peer links between DeepSeek Harness instances with password-guarded, tiered access.",
+  "keywords": [
+    "deepseek",
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "peer-to-peer",
+    "encrypted",
+    "workspace-sharing"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GGGinnnnn/dsh-peerweave.git"
+  },
+  "homepage": "https://github.com/GGGinnnnn/dsh-peerweave#readme",
+  "bugs": {
+    "url": "https://github.com/GGGinnnnn/dsh-peerweave/issues"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "lib/*.js",
+    "locale/*.json",
+    "icon.svg",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-settings"
+      ]
+    }
+  }
+}

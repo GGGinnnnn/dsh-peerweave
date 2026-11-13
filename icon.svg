@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="Peerweave">
+  <defs>
+    <linearGradient id="pwv-g" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f8f9d"/>
+      <stop offset="1" stop-color="#2456a6"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#pwv-g)"/>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-width="3.4" opacity="0.95">
+    <path d="M18 24c8-7 20-7 28 0"/>
+    <path d="M18 40c8 7 20 7 28 0"/>
+    <path d="M24 18c-7 8-7 20 0 28"/>
+    <path d="M40 18c7 8 7 20 0 28"/>
+  </g>
+  <circle cx="32" cy="32" r="7.2" fill="#ffffff"/>
+  <circle cx="32" cy="32" r="3.1" fill="#2f8f9d"/>
+</svg>

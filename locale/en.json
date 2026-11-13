@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Peerweave",
+    "description": "Link DSH instances on other computers over an encrypted peer network, with password-guarded tiers for viewing workspace history, reading files, and chatting with the local agent."
+  }
+}
