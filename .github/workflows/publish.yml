@@ -1,0 +1,28 @@
+name: Publish npm package
+
+# Publishes dsh-peerweave to the npm registry so DSH can install it by name.
+# Requires a repository secret named NPM_TOKEN (npm granular access token with
+# publish rights for the dsh-peerweave package). Run manually after adding the
+# secret, or publish a GitHub Release.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Publish
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
