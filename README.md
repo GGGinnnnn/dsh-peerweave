@@ -47,6 +47,8 @@ git clone https://github.com/GGGinnnnn/dsh-peerweave.git
 > **Console 报 `slot "..." is not declared`？** 这是 Client 半加载得比宿主插槽声明更早。1.2.1 起所有插槽都通过 `ctx.slots.inject(slot, () => ctx.slots.register(...))` 等待 owner；请更新到 1.2.1 或更新源码后完整重启。不要再用直接的 `ctx.slots.register`，它在早期加载时会被宿主拒绝。
 >
 > 1.2.1 的修复不改变数据或权限：安装后先确认 `设置 → Peerweave` 和左侧底部 Peerweave 入口是否出现；若仍没有，打开 DevTools Console 把第一条 `[peerweave] ... registration failed` / `slot entry crashed` 报错发出来。
+>
+> **重启后插件有时消失？** 先检查 profile 的 `node_modules/dsh-peerweave/package.json` 版本是否为 **1.2.1**，以及 `client.js` 是否包含 `ctx.slots.inject`。如果仍是 1.2.0，说明 GitHub 依赖被 lockfile 固定到了旧提交；把依赖改成 `github:GGGinnnnn/dsh-peerweave#v1.2.1` 后重新安装并重启。1.2.0 使用直接的 `ctx.slots.register`，在 bundle 被排到 `@deepseek-ai/dsh-web-app` 前面时会四连失败，表现就是“插件启用但界面消失”。
 
 > 忘记密码时：打开 设置 → Peerweave 的锁定页，在密码输入框下方使用 **「强制清除 Peerweave…」**。点击后进入二级确认，必须等满 10 秒才能确认；确认后插件恢复到刚安装、尚未设置密码的状态，身份密钥、密码、全部节点和所有设置都会被删除。也可以退出 DSH 后手动删除 `%DSH_HOME%\peerweave\<配置档>\state.json`。已知密码时可在设置页使用「清空一切」。
 
