@@ -165,6 +165,7 @@ window.__ModuleLoader__.load({
       'settings.advertiseHostHint': 'Leave empty to advertise the detected LAN address.',
       'settings.saved': 'Settings saved.',
       'settings.readOnly': 'Read-only view. Changing settings requires the password.',
+      'settings.viewOnlyHint': 'Every section below is visible. Saving a change asks for the password.',
       'settings.unlockEdit': 'Unlock to edit',
       'settings.access': 'Password prompt',
       'settings.unlockOnce': 'Unlock once per DSH launch',
@@ -393,6 +394,7 @@ window.__ModuleLoader__.load({
       'settings.advertiseHostHint': '留空则使用自动检测到的局域网地址。',
       'settings.saved': '设置已保存。',
       'settings.readOnly': '当前为只读视图；修改设置需要输入密码。',
+      'settings.viewOnlyHint': '下面的设置都可以查看；保存修改时会要求输入密码。',
       'settings.unlockEdit': '解锁修改',
       'settings.access': '密码询问方式',
       'settings.unlockOnce': '每次打开 DSH 解锁一次',
@@ -2406,7 +2408,7 @@ window.__ModuleLoader__.load({
         !editable
           ? h('div', { className: 'pwv-card' },
             h('div', { className: 'pwv-title' }, t('settings.readOnly')),
-            h('div', { className: 'pwv-sub' }, t('settings.readOnly')),
+            h('div', { className: 'pwv-sub' }, t('settings.viewOnlyHint')),
             h('div', { className: 'pwv-row', style: { marginTop: 8 } },
               h(Btn, { primary: true, onClick: () => ensureAuth().then(() => reload()).catch(() => {}) }, t('settings.unlockEdit'))))
           : null,
