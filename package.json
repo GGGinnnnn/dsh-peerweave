@@ -3,6 +3,7 @@
   "version": "1.3.2",
   "type": "module",
   "description": "Peerweave: encrypted peer-to-peer links between DeepSeek Harness instances with password-guarded, tiered access.",
+  "license": "MIT",
   "keywords": [
     "deepseek",
     "deepseek-harness",
@@ -35,7 +36,8 @@
     "locale/*.json",
     "docs/*.md",
     "icon.svg",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "bin": {
     "dsh-peerweave-relay": "./relay.js"
