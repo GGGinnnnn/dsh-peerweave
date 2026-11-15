@@ -34,6 +34,22 @@
 
 要求 DSH `0.2.2-rc.1` 或兼容版本（Web 客户端 + `settings.section` / `conversation.composer.dock` 插槽）。
 
+### 从 npm 安装
+
+发布到 npm 后，可以直接让 DSH 的 Plugin Manager 安装包名：
+
+```text
+dsh-peerweave@1.3.2
+```
+
+或在 Agent 中执行：
+
+```text
+plugin_manager install_bundle dsh-peerweave@1.3.2
+```
+
+### 从源码安装
+
 ```bash
 git clone https://github.com/GGGinnnnn/dsh-peerweave.git
 ```
