@@ -164,6 +164,14 @@ window.__ModuleLoader__.load({
       'settings.advertiseHost': 'Address peers should dial',
       'settings.advertiseHostHint': 'Leave empty to advertise the detected LAN address.',
       'settings.saved': 'Settings saved.',
+      'settings.readOnly': 'Read-only view. Changing settings requires the password.',
+      'settings.unlockEdit': 'Unlock to edit',
+      'settings.access': 'Password prompt',
+      'settings.unlockOnce': 'Unlock once per DSH launch',
+      'settings.unlockOnceHint': 'After one unlock, settings can be changed without asking again until DSH restarts.',
+      'settings.unlockAlways': 'Ask for the password on every change',
+      'settings.unlockAlwaysHint': 'Settings stay visible, but every save asks for the password again.',
+      'settings.passwordRequired': 'Enter the password before changing settings.',
       'password.title': 'Change password',
       'password.current': 'Current password',
       'password.next': 'New password',
@@ -208,6 +216,11 @@ window.__ModuleLoader__.load({
       'chat.permissionValue': 'Current peer defaults — read-only',
       'chat.fullEmpty': 'Chat directly with the peer DSH. Its workspace, model and permissions stay on its side and cannot be changed from here.',
       'files.title': 'Shared files',
+      'files.sync': 'Sync',
+      'files.syncing': 'Syncing…',
+      'files.synced': 'Synced: {0} sessions / {1} file entries',
+      'files.syncHint': 'Download the latest history and file index for offline use.',
+      'files.cached': 'Offline · last sync {0}',
       'files.workspaces': 'Workspaces',
       'files.empty': 'This folder is empty.',
       'files.root': 'Root',
@@ -379,6 +392,14 @@ window.__ModuleLoader__.load({
       'settings.advertiseHost': '供对方连接的地址',
       'settings.advertiseHostHint': '留空则使用自动检测到的局域网地址。',
       'settings.saved': '设置已保存。',
+      'settings.readOnly': '当前为只读视图；修改设置需要输入密码。',
+      'settings.unlockEdit': '解锁修改',
+      'settings.access': '密码询问方式',
+      'settings.unlockOnce': '每次打开 DSH 解锁一次',
+      'settings.unlockOnceHint': '本次启动内解锁一次后，修改设置不再询问密码；重启 DSH 后重新询问。',
+      'settings.unlockAlways': '每次修改设置都询问密码',
+      'settings.unlockAlwaysHint': '设置始终可以查看，但每次保存都要重新输入密码。',
+      'settings.passwordRequired': '修改设置前请输入密码。',
       'password.title': '修改密码',
       'password.current': '当前密码',
       'password.next': '新密码',
@@ -423,6 +444,11 @@ window.__ModuleLoader__.load({
       'chat.permissionValue': '对方当前默认设置 — 只读',
       'chat.fullEmpty': '直接与对方的 DSH 对话。对方的工作区、模型和权限都留在对方一侧，这里不能修改。',
       'files.title': '共享文件',
+      'files.sync': '同步',
+      'files.syncing': '同步中…',
+      'files.synced': '已同步：{0} 条会话 / {1} 个文件项',
+      'files.syncHint': '下载最新的历史记录与文件索引，离线时也能查看。',
+      'files.cached': '离线 · 上次同步 {0}',
       'files.workspaces': '工作区',
       'files.empty': '这个文件夹是空的。',
       'files.root': '根目录',
@@ -443,9 +469,51 @@ window.__ModuleLoader__.load({
     }
 
     // ------------------------------------------------------------------
-    // In-memory page session (the unlock token never touches storage)
+    // Page session. The unlock token stays in memory; a `once` token is
+    // mirrored to sessionStorage so a renderer refresh inside the same DSH
+    // launch does not ask again. "always" tokens are never persisted.
     // ------------------------------------------------------------------
-    const session = { token: null, expiresAt: 0, listeners: new Set() }
+    const SESSION_KEY = 'peerweave.session.v1'
+    const session = { token: null, expiresAt: 0, policy: 'once', listeners: new Set() }
+
+    function readStoredSession() {
+      try {
+        const raw = sessionStorage.getItem(SESSION_KEY)
+        if (!raw) return null
+        const data = JSON.parse(raw)
+        if (!data || data.policy !== 'once' || !data.token) return null
+        if (data.expiresAt && data.expiresAt !== Number.MAX_SAFE_INTEGER && data.expiresAt < Date.now()) {
+          sessionStorage.removeItem(SESSION_KEY)
+          return null
+        }
+        return data
+      } catch {
+        return null
+      }
+    }
+
+    function persistSession() {
+      try {
+        if (session.token && session.policy === 'once') {
+          sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+            token: session.token,
+            expiresAt: session.expiresAt || Number.MAX_SAFE_INTEGER,
+            policy: 'once',
+          }))
+        } else {
+          sessionStorage.removeItem(SESSION_KEY)
+        }
+      } catch {
+        /* sessionStorage can be unavailable in a locked-down renderer */
+      }
+    }
+
+    const restored = readStoredSession()
+    if (restored) {
+      session.token = restored.token
+      session.expiresAt = restored.expiresAt || Number.MAX_SAFE_INTEGER
+      session.policy = 'once'
+    }
 
     const peerPanel = { open: false, peerId: null, listeners: new Set() }
     const chatMemory = { peerId: '', messages: [] }
@@ -465,9 +533,11 @@ window.__ModuleLoader__.load({
       return peerPanel
     }
 
-    function setSession(token, expiresAt) {
+    function setSession(token, expiresAt, policy) {
       session.token = token || null
-      session.expiresAt = expiresAt || 0
+      session.expiresAt = expiresAt || (token && policy === 'once' ? Number.MAX_SAFE_INTEGER : 0)
+      session.policy = policy === 'always' ? 'always' : 'once'
+      persistSession()
       for (const listener of [...session.listeners]) listener()
     }
 
@@ -734,7 +804,7 @@ window.__ModuleLoader__.load({
         setError('')
         try {
           const data = await post('unlock', { password })
-          setSession(data.token, data.expiresAt)
+          setSession(data.token, data.expiresAt, data.policy)
           setPassword('')
           if (onDone) onDone()
         } catch (failure) {
@@ -756,6 +826,54 @@ window.__ModuleLoader__.load({
           }),
           h(Btn, { primary: true, onClick: submit, disabled: busy || !password }, busy ? t('common.loading') : t('unlock.submit'))),
         h(ErrorLine, { text: error }))
+    }
+
+    // ------------------------------------------------------------------
+    // Password prompt used when a settings change needs authentication.
+    // Viewing settings never opens this dialog.
+    // ------------------------------------------------------------------
+    function PasswordPrompt({ t, title, onDone, onCancel }) {
+      const [password, setPassword] = useState('')
+      const [busy, setBusy] = useState(false)
+      const [error, setError] = useState('')
+      async function submit() {
+        if (!password || busy) return
+        setBusy(true)
+        setError('')
+        try {
+          const data = await post('unlock', { password })
+          setSession(data.token, data.expiresAt, data.policy)
+          onDone(password)
+        } catch (failure) {
+          setError(errorLabel(t, failure))
+        } finally {
+          setBusy(false)
+        }
+      }
+      return h('div', {
+        style: {
+          position: 'fixed', inset: 0, zIndex: 10000, display: 'flex',
+          alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,.42)',
+        },
+        onClick: (event) => { if (event.target === event.currentTarget && onCancel) onCancel() },
+      },
+      h('div', { className: 'pwv-card', style: { width: 'min(520px, 92vw)', padding: 18 } },
+        h('div', { className: 'pwv-title' }, title || t('settings.passwordRequired')),
+        h('div', { className: 'pwv-sub' }, t('unlock.intro')),
+        h('div', { className: 'pwv-row', style: { marginTop: 10 } },
+          h('div', { className: 'pwv-grow' }, h(Input, {
+            value: password,
+            onChange: setPassword,
+            type: 'password',
+            placeholder: t('unlock.title'),
+            disabled: busy,
+            autoFocus: true,
+            onEnter: submit,
+          }))),
+        h(ErrorLine, { text: error }),
+        h('div', { className: 'pwv-row', style: { marginTop: 10, justifyContent: 'flex-end' } },
+          h(Btn, { ghost: true, onClick: onCancel, disabled: busy }, t('common.cancel')),
+          h(Btn, { primary: true, onClick: submit, disabled: busy || !password }, busy ? t('common.loading') : t('unlock.submit')))))
     }
 
     // ------------------------------------------------------------------
@@ -1136,6 +1254,7 @@ window.__ModuleLoader__.load({
             h(Btn, { ghost: true, onClick: () => setDetail(null) }, `← ${t('history.back')}`),
             h('strong', { className: 'pwv-grow' }, detail.title || detail.sessionId),
             h('span', { className: 'pwv-badge' }, `${detail.messages.length} ${t('history.messages')}`),
+            detail.cached ? h('span', { className: 'pwv-badge' }, t('files.cached', formatTime(detail.syncedAt))) : null,
             onMemory
               ? h(Btn, { onClick: () => onMemory({ sessionId: detail.sessionId, title: detail.title }), disabled: busy }, t('history.memory'))
               : null),
@@ -1189,6 +1308,7 @@ window.__ModuleLoader__.load({
             : null,
           h(Btn, { ghost: true, onClick: loadList, disabled: busy }, busy ? t('common.loading') : t('common.refresh'))),
         h(ErrorLine, { text: error }),
+        list && list.cached ? h('div', { className: 'pwv-muted' }, t('files.cached', formatTime(list.syncedAt))) : null,
         !list ? (busy ? h('span', { className: 'pwv-muted' }, t('common.loading')) : null)
           : activeGroups.length === 0 && archivedGroups.length === 0
             ? h('span', { className: 'pwv-muted' }, t('history.empty'))
@@ -1299,6 +1419,9 @@ window.__ModuleLoader__.load({
       const [busy, setBusy] = useState(false)
       const [error, setError] = useState('')
       const [note, setNote] = useState('')
+      const [syncBusy, setSyncBusy] = useState(false)
+      const [syncNote, setSyncNote] = useState('')
+      const [cachedAt, setCachedAt] = useState(0)
 
       const loadWorkspaces = useCallback(async () => {
         setBusy(true)
@@ -1309,6 +1432,7 @@ window.__ModuleLoader__.load({
           const data = await post('remote/files/workspaces', { peerId: peer.id })
           const list = (data && data.workspaces) || []
           setWorkspaces(list)
+          setCachedAt(data && data.cached ? data.syncedAt : 0)
           if (list.length === 1) setWorkspace(list[0])
         } catch (failure) {
           setError(errorLabel(t, failure))
@@ -1324,13 +1448,36 @@ window.__ModuleLoader__.load({
         setError('')
         setFile(null)
         try {
-          setListing(await post('remote/files/list', { peerId: peer.id, path: path || '', workspaceId: current.id }))
+          const data = await post('remote/files/list', { peerId: peer.id, path: path || '', workspaceId: current.id })
+          setListing(data)
+          setCachedAt(data && data.cached ? data.syncedAt : 0)
         } catch (failure) {
           setError(errorLabel(t, failure))
         } finally {
           setBusy(false)
         }
       }, [peer.id, t, workspace])
+
+      async function syncNow() {
+        setSyncBusy(true)
+        setError('')
+        setSyncNote('')
+        try {
+          const result = await post('remote/sync', {
+            peerId: peer.id,
+            workspaceId: workspace ? workspace.id : '',
+            path: listing ? listing.path : '',
+          })
+          setCachedAt(0)
+          setSyncNote(t('files.synced', result.sessions, result.files))
+          if (workspace) await load(listing ? listing.path : '', workspace)
+          else await loadWorkspaces()
+        } catch (failure) {
+          setError(errorLabel(t, failure))
+        } finally {
+          setSyncBusy(false)
+        }
+      }
 
       useEffect(() => {
         loadWorkspaces()
@@ -1407,8 +1554,11 @@ window.__ModuleLoader__.load({
         return h('div', null,
           h('div', { className: 'pwv-row', style: { marginBottom: 6 } },
             h('strong', { className: 'pwv-grow' }, t('files.workspaces')),
+            h(Btn, { primary: true, onClick: syncNow, disabled: busy || syncBusy, title: t('files.syncHint') }, syncBusy ? t('files.syncing') : t('files.sync')),
             h(Btn, { ghost: true, onClick: loadWorkspaces, disabled: busy }, busy ? t('common.loading') : t('common.refresh'))),
           h(ErrorLine, { text: error }),
+          h(OkLine, { text: syncNote }),
+          cachedAt ? h('div', { className: 'pwv-muted' }, t('files.cached', formatTime(cachedAt))) : null,
           !workspaces ? (busy ? h('span', { className: 'pwv-muted' }, t('common.loading')) : null)
             : workspaces.length === 0 ? h('span', { className: 'pwv-muted' }, t('files.empty'))
               : h('div', { className: 'pwv-list' },
@@ -1428,9 +1578,12 @@ window.__ModuleLoader__.load({
           h(Btn, { ghost: true, onClick: backToWorkspaces, disabled: busy }, `← ${t('files.workspaces')}`),
           h(Btn, { ghost: true, onClick: () => load(listing ? listing.parent : '', workspace), disabled: busy || !listing || listing.path === '' }, `← ${t('files.up')}`),
           h('strong', { className: 'pwv-grow pwv-mono' }, `${workspace.title}/${listing ? listing.path || '' : ''}`),
+          h(Btn, { primary: true, onClick: syncNow, disabled: busy || syncBusy, title: t('files.syncHint') }, syncBusy ? t('files.syncing') : t('files.sync')),
           h('span', { className: 'pwv-badge' }, `${t('files.limit')}: ${formatBytes(listing ? listing.limitBytes : 0)}`),
           h(Btn, { ghost: true, onClick: () => load(listing ? listing.path : '', workspace), disabled: busy }, t('common.refresh'))),
         h(ErrorLine, { text: error }),
+        h(OkLine, { text: syncNote }),
+        cachedAt ? h('div', { className: 'pwv-muted' }, t('files.cached', formatTime(cachedAt))) : null,
         h(OkLine, { text: note }),
         !listing ? (busy ? h('span', { className: 'pwv-muted' }, t('common.loading')) : null)
           : listing.entries.length === 0 ? h('span', { className: 'pwv-muted' }, t('files.empty'))
@@ -1536,7 +1689,7 @@ window.__ModuleLoader__.load({
         setBusy(true)
         try {
           const data = await post('setup', { password, confirm, displayName })
-          setSession(data.token, data.expiresAt)
+          setSession(data.token, data.expiresAt, data.policy)
           setDone(t('setup.done'))
           if (onDone) onDone()
         } catch (failure) {
@@ -1643,7 +1796,7 @@ window.__ModuleLoader__.load({
         h(OkLine, { text: ok }))
     }
 
-    function PeerCard({ t, peer, onChanged }) {
+    function PeerCard({ t, peer, onChanged, readOnly }) {
       const [removeOpen, setRemoveOpen] = useState(false)
       const [removePassword, setRemovePassword] = useState('')
       const [busy, setBusy] = useState(false)
@@ -1701,14 +1854,15 @@ window.__ModuleLoader__.load({
         h('div', { className: 'pwv-muted' },
           `${t('peers.transport')}: ${peer.endpoint || peer.transport}${peer.relay ? ` · ${t('peers.relayRole')}: ${peer.relay.role}` : ''} · ${t('peers.lastSeen')}: ${formatTime(peer.lastSeenAt)}`),
         h('div', { className: 'pwv-muted' }, `${t('peers.grantedToMe')}: ${peer.remoteTier >= 0 ? t(`tier.${peer.remoteTier}`) : t('tier.unknown')}${peer.remoteSharedLabel ? ` · ${peer.remoteSharedLabel}` : ''}`),
-        h(GrantEditor, { t, peer, onChanged }),
-        h('div', { className: 'pwv-sep' }),
-        h('div', { className: 'pwv-row' },
+        peer.lastSyncedAt ? h('div', { className: 'pwv-muted' }, `${t('settings.cachedTitle')}: ${t('files.cached', formatTime(peer.lastSyncedAt))} · ${peer.cachedSessions || 0} / ${peer.cachedFiles || 0}`) : null,
+        readOnly ? null : h(GrantEditor, { t, peer, onChanged }),
+        readOnly ? null : h('div', { className: 'pwv-sep' }),
+        readOnly ? null : h('div', { className: 'pwv-row' },
           peer.connected
             ? h(Btn, { onClick: disconnect, disabled: busy }, t('peers.disconnect'))
             : h(Btn, { onClick: connect, disabled: busy }, t('peers.connect')),
           h(Btn, { danger: true, onClick: () => setRemoveOpen(!removeOpen), disabled: busy }, t('peers.remove'))),
-        removeOpen
+        readOnly ? null : removeOpen
           ? h('div', { className: 'pwv-col', style: { marginTop: 6 } },
             h('span', { className: 'pwv-muted' }, t('peers.removeConfirm')),
             h('div', { className: 'pwv-row' },
@@ -1836,30 +1990,26 @@ window.__ModuleLoader__.load({
           h('div', { className: 'pwv-row' }, h(Btn, { onClick: join, disabled: joinBusy || !code.trim() }, joinBusy ? t('common.loading') : t('invite.joinSubmit')))))
     }
 
-    function SharingSettings({ t, state, onChanged }) {
+    function SharingSettings({ t, state, onChanged, auth }) {
       const [mib, setMib] = useState(String(Math.round((state.settings.maxFileBytes || MI_B) / MI_B * 100) / 100))
       const [listenPort, setListenPort] = useState(String(state.settings.listenPort || ''))
       const [displayName, setDisplayName] = useState(state.settings.displayName || '')
       const [advertiseHost, setAdvertiseHost] = useState(state.settings.advertiseHost || '')
       const [autoConnect, setAutoConnect] = useState(Boolean(state.settings.autoConnect))
       const [bindHost, setBindHost] = useState(state.settings.bindHost || '0.0.0.0')
-      const [password, setPassword] = useState('')
       const [busy, setBusy] = useState(false)
       const [error, setError] = useState('')
       const [ok, setOk] = useState('')
 
       async function save() {
-        if (!password) {
-          setError(t('grant.needsPassword'))
-          return
-        }
         setBusy(true)
         setError('')
         setOk('')
         try {
+          const password = await auth.ensure()
           const bytes = Math.max(1024, Math.round(Number(mib) * MI_B))
           await post('settings/update', {
-            password,
+            password: password || undefined,
             patch: {
               maxFileBytes: bytes,
               listenPort: Number(listenPort),
@@ -1869,11 +2019,11 @@ window.__ModuleLoader__.load({
               autoConnect,
             },
           })
-          setPassword('')
           setOk(t('settings.saved'))
+          auth.afterChange()
           if (onChanged) onChanged()
         } catch (failure) {
-          setError(errorLabel(t, failure))
+          if (failure && failure.code !== 'cancelled') setError(errorLabel(t, failure))
         } finally {
           setBusy(false)
         }
@@ -1894,17 +2044,30 @@ window.__ModuleLoader__.load({
             h('option', { value: '::' }, t('net.bindV6')))),
         h('label', { className: 'pwv-muted' }, h('input', { type: 'checkbox', checked: autoConnect, onChange: (event) => setAutoConnect(event.target.checked) }), ` ${t('settings.autoConnect')}`),
         h('div', { className: 'pwv-row', style: { marginTop: 6 } },
-          h('div', { className: 'pwv-grow' }, h(Input, { value: password, onChange: setPassword, type: 'password', placeholder: t('common.password') })),
+          h('div', { className: 'pwv-grow' }),
           h(Btn, { primary: true, onClick: save, disabled: busy }, busy ? t('common.loading') : t('common.save'))),
         h(ErrorLine, { text: error }),
         h(OkLine, { text: ok }))
     }
 
-    function CrossNetSettings({ t, state, full, onChanged }) {
-      const [reverse, setReverse] = useState(full ? { ...full.reverseSsh } : { enabled: false, target: '', bindPort: 0, extraArgs: '' })
-      const [relayClient, setRelayClient] = useState(full ? { ...full.relayClient } : { host: '', port: 41338, token: '' })
-      const [relayServer, setRelayServer] = useState(full ? { ...full.relayServer } : { enabled: false, port: 41338, token: '' })
-      const [password, setPassword] = useState('')
+    function CrossNetSettings({ t, state, full, onChanged, auth }) {
+      const initialReverse = full
+        ? { ...full.reverseSsh }
+        : {
+            enabled: Boolean(state.reverseSsh && state.reverseSsh.enabled),
+            target: String((state.reverseSsh && state.reverseSsh.target) || ''),
+            bindPort: Number((state.reverseSsh && state.reverseSsh.bindPort) || 0),
+            extraArgs: '',
+          }
+      const initialRelayClient = full
+        ? { ...full.relayClient }
+        : { host: String((state.relayClient && state.relayClient.host) || ''), port: Number((state.relayClient && state.relayClient.port) || 41338), token: '' }
+      const initialRelayServer = full
+        ? { ...full.relayServer }
+        : { enabled: Boolean(state.relayServer && state.relayServer.enabled), port: Number((state.relayServer && state.relayServer.port) || 41338), token: '' }
+      const [reverse, setReverse] = useState(initialReverse)
+      const [relayClient, setRelayClient] = useState(initialRelayClient)
+      const [relayServer, setRelayServer] = useState(initialRelayServer)
       const [busy, setBusy] = useState(false)
       const [error, setError] = useState('')
       const [ok, setOk] = useState('')
@@ -1917,16 +2080,13 @@ window.__ModuleLoader__.load({
       }, [full])
 
       async function save() {
-        if (!password) {
-          setError(t('grant.needsPassword'))
-          return
-        }
         setBusy(true)
         setError('')
         setOk('')
         try {
+          const password = await auth.ensure()
           await post('settings/update', {
-            password,
+            password: password || undefined,
             patch: {
               reverseSsh: {
                 enabled: Boolean(reverse.enabled),
@@ -1946,11 +2106,11 @@ window.__ModuleLoader__.load({
               },
             },
           })
-          setPassword('')
           setOk(t('net.saved'))
+          auth.afterChange()
           if (onChanged) onChanged()
         } catch (failure) {
-          setError(errorLabel(t, failure))
+          if (failure && failure.code !== 'cancelled') setError(errorLabel(t, failure))
         } finally {
           setBusy(false)
         }
@@ -1966,28 +2126,29 @@ window.__ModuleLoader__.load({
       return h('div', { className: 'pwv-card' },
         h('div', { className: 'pwv-h' }, t('net.title')),
         h('div', { className: 'pwv-sub' }, t('net.intro')),
-        full ? null : h('div', { className: 'pwv-muted' }, t('common.loading')),
+        full ? null : h('div', { className: 'pwv-muted' }, t('settings.readOnly')),
 
         h('div', { className: 'pwv-h' }, t('net.reverse')),
         h('label', { className: 'pwv-muted' },
           h('input', {
             type: 'checkbox',
             checked: Boolean(reverse.enabled),
+            disabled: !full,
             onChange: (event) => setReverse({ ...reverse, enabled: event.target.checked }),
           }), ` ${t('net.reverseEnable')}`),
         h('div', { className: 'pwv-row' },
-          h('div', { className: 'pwv-grow' }, h(Input, { value: reverse.target, onChange: (value) => setReverse({ ...reverse, target: value }), placeholder: t('net.reverseTarget') })),
-          h('div', { style: { width: 160 } }, h(Input, { value: String(reverse.bindPort || ''), onChange: (value) => setReverse({ ...reverse, bindPort: value }), type: 'number', placeholder: t('net.reverseBindPort') }))),
+          h('div', { className: 'pwv-grow' }, h(Input, { value: reverse.target, onChange: (value) => setReverse({ ...reverse, target: value }), placeholder: t('net.reverseTarget'), disabled: !full })),
+          h('div', { style: { width: 160 } }, h(Input, { value: String(reverse.bindPort || ''), onChange: (value) => setReverse({ ...reverse, bindPort: value }), type: 'number', placeholder: t('net.reverseBindPort'), disabled: !full }))),
         h('div', { className: 'pwv-row' },
-          h('div', { className: 'pwv-grow' }, h(Input, { value: reverse.extraArgs, onChange: (value) => setReverse({ ...reverse, extraArgs: value }), placeholder: t('net.reverseExtra') }))),
+          h('div', { className: 'pwv-grow' }, h(Input, { value: reverse.extraArgs, onChange: (value) => setReverse({ ...reverse, extraArgs: value }), placeholder: t('net.reverseExtra'), disabled: !full }))),
         h('div', { className: 'pwv-muted' }, t('net.reverseHint')),
         h('div', { className: 'pwv-muted' }, reverseStatus),
 
         h('div', { className: 'pwv-h' }, t('net.relayClient')),
         h('div', { className: 'pwv-row' },
-          h('div', { className: 'pwv-grow' }, h(Input, { value: relayClient.host, onChange: (value) => setRelayClient({ ...relayClient, host: value }), placeholder: t('net.relayHost') })),
-          h('div', { style: { width: 150 } }, h(Input, { value: String(relayClient.port || ''), onChange: (value) => setRelayClient({ ...relayClient, port: value }), type: 'number', placeholder: t('net.relayPort') })),
-          h('div', { className: 'pwv-grow' }, h(Input, { value: relayClient.token, onChange: (value) => setRelayClient({ ...relayClient, token: value }), type: 'password', placeholder: t('net.relayToken') }))),
+          h('div', { className: 'pwv-grow' }, h(Input, { value: relayClient.host, onChange: (value) => setRelayClient({ ...relayClient, host: value }), placeholder: t('net.relayHost'), disabled: !full })),
+          h('div', { style: { width: 150 } }, h(Input, { value: String(relayClient.port || ''), onChange: (value) => setRelayClient({ ...relayClient, port: value }), type: 'number', placeholder: t('net.relayPort'), disabled: !full })),
+          h('div', { className: 'pwv-grow' }, h(Input, { value: relayClient.token, onChange: (value) => setRelayClient({ ...relayClient, token: value }), type: 'password', placeholder: t('net.relayToken'), disabled: !full }))),
         h('div', { className: 'pwv-muted' }, t('net.relayClientHint')),
 
         h('div', { className: 'pwv-h' }, t('net.relayServer')),
@@ -1995,17 +2156,18 @@ window.__ModuleLoader__.load({
           h('input', {
             type: 'checkbox',
             checked: Boolean(relayServer.enabled),
+            disabled: !full,
             onChange: (event) => setRelayServer({ ...relayServer, enabled: event.target.checked }),
           }), ` ${t('net.relayServerEnable')}`),
         h('div', { className: 'pwv-row' },
-          h('div', { style: { width: 150 } }, h(Input, { value: String(relayServer.port || ''), onChange: (value) => setRelayServer({ ...relayServer, port: value }), type: 'number', placeholder: t('net.relayPort') })),
-          h('div', { className: 'pwv-grow' }, h(Input, { value: relayServer.token, onChange: (value) => setRelayServer({ ...relayServer, token: value }), type: 'password', placeholder: t('net.relayToken') }))),
+          h('div', { style: { width: 150 } }, h(Input, { value: String(relayServer.port || ''), onChange: (value) => setRelayServer({ ...relayServer, port: value }), type: 'number', placeholder: t('net.relayPort'), disabled: !full })),
+          h('div', { className: 'pwv-grow' }, h(Input, { value: relayServer.token, onChange: (value) => setRelayServer({ ...relayServer, token: value }), type: 'password', placeholder: t('net.relayToken'), disabled: !full }))),
         h('div', { className: 'pwv-muted' }, t('net.relayServerHint')),
         h('div', { className: 'pwv-muted' }, relayStatus),
 
-        h('div', { className: 'pwv-row', style: { marginTop: 8 } },
-          h('div', { className: 'pwv-grow' }, h(Input, { value: password, onChange: setPassword, type: 'password', placeholder: t('common.password') })),
-          h(Btn, { primary: true, onClick: save, disabled: busy || !full }, busy ? t('common.loading') : t('net.save'))),
+        full ? h('div', { className: 'pwv-row', style: { marginTop: 8 } },
+          h('div', { className: 'pwv-grow' }),
+          h(Btn, { primary: true, onClick: save, disabled: busy }, busy ? t('common.loading') : t('net.save'))) : null,
         h(ErrorLine, { text: error }),
         h(OkLine, { text: ok }),
 
@@ -2016,6 +2178,62 @@ window.__ModuleLoader__.load({
             h('details', { key, className: 'pwv-tutorial' },
               h('summary', null, t(`tutorial.${key}.title`)),
               h('div', { className: 'pwv-guide-body' }, t(`tutorial.${key}.body`))))))
+    }
+
+    function AccessPolicySettings({ t, state, auth, onChanged }) {
+      const [policy, setPolicy] = useState((state.settings && state.settings.unlockPolicy) || 'once')
+      const [busy, setBusy] = useState(false)
+      const [error, setError] = useState('')
+      const [ok, setOk] = useState('')
+
+      useEffect(() => {
+        setPolicy((state.settings && state.settings.unlockPolicy) || 'once')
+      }, [state.settings && state.settings.unlockPolicy])
+
+      async function save() {
+        setBusy(true)
+        setError('')
+        setOk('')
+        try {
+          const password = await auth.ensure()
+          await post('settings/update', {
+            password: password || undefined,
+            patch: { unlockPolicy: policy },
+          })
+          setOk(t('settings.saved'))
+          auth.afterChange(policy)
+          if (onChanged) onChanged()
+        } catch (failure) {
+          if (failure && failure.code !== 'cancelled') setError(errorLabel(t, failure))
+        } finally {
+          setBusy(false)
+        }
+      }
+
+      return h('div', { className: 'pwv-card' },
+        h('div', { className: 'pwv-h' }, t('settings.access')),
+        h('div', { className: 'pwv-col', style: { gap: 6, marginTop: 4 } },
+          h('label', { className: 'pwv-muted' },
+            h('input', {
+              type: 'radio',
+              name: 'pwv-unlock-policy',
+              checked: policy === 'once',
+              onChange: () => setPolicy('once'),
+            }), ` ${t('settings.unlockOnce')}`),
+          h('div', { className: 'pwv-muted', style: { marginLeft: 22 } }, t('settings.unlockOnceHint')),
+          h('label', { className: 'pwv-muted', style: { marginTop: 4 } },
+            h('input', {
+              type: 'radio',
+              name: 'pwv-unlock-policy',
+              checked: policy === 'always',
+              onChange: () => setPolicy('always'),
+            }), ` ${t('settings.unlockAlways')}`),
+          h('div', { className: 'pwv-muted', style: { marginLeft: 22 } }, t('settings.unlockAlwaysHint'))),
+        h('div', { className: 'pwv-row', style: { marginTop: 8 } },
+          h('div', { className: 'pwv-grow' }),
+          h(Btn, { primary: true, onClick: save, disabled: busy }, busy ? t('common.loading') : t('common.save'))),
+        h(ErrorLine, { text: error }),
+        h(OkLine, { text: ok }))
     }
 
     function PasswordSection({ t }) {
@@ -2113,6 +2331,7 @@ window.__ModuleLoader__.load({
       const current = useSession()
       const { state, error, reload } = usePublic(true, 3000)
       const [full, setFull] = useState(null)
+      const [prompt, setPrompt] = useState(null)
       const loadFull = useCallback(async () => {
         if (!current.token) {
           setFull(null)
@@ -2133,6 +2352,35 @@ window.__ModuleLoader__.load({
         loadFull()
       }
 
+      const ensureAuth = useCallback(() => {
+        if (current.token && (!state || !state.settings || state.settings.unlockPolicy !== 'always')) {
+          return Promise.resolve('')
+        }
+        return new Promise((resolve, reject) => {
+          setPrompt({ resolve, reject, title: t('settings.passwordRequired') })
+        })
+      }, [current.token, state && state.settings && state.settings.unlockPolicy, t])
+
+      const afterChange = useCallback((policy) => {
+        const next = policy || (state && state.settings && state.settings.unlockPolicy)
+        if (next === 'always') setSession(null, 0)
+      }, [state && state.settings && state.settings.unlockPolicy])
+
+      const auth = { ensure: ensureAuth, afterChange }
+      const finishPrompt = (password) => {
+        const active = prompt
+        setPrompt(null)
+        if (active) active.resolve(password)
+      }
+      const cancelPrompt = () => {
+        const active = prompt
+        setPrompt(null)
+        if (active) {
+          const failure = new UiError('cancelled', 'cancelled')
+          active.reject(failure)
+        }
+      }
+
       if (!state) {
         return h('div', { className: 'pwv-root', style: { padding: 12 } }, h(Styles),
           h('div', { className: 'pwv-muted' }, error === 'network' ? t('error.network') : t('common.loading')))
@@ -2143,47 +2391,49 @@ window.__ModuleLoader__.load({
           h(SetupCard, { t, onDone: reload }))
       }
 
+      const editable = Boolean(current.token)
+
       return h('div', { className: 'pwv-root', style: { padding: '2px 2px 24px' } },
         h(Styles),
         h('div', { className: 'pwv-row' },
           h('div', { className: 'pwv-grow' },
             h('div', { className: 'pwv-title' }, t('section.title')),
             h('div', { className: 'pwv-sub' }, t('section.description'))),
-          state.unlocked
+          editable
             ? h(Btn, { onClick: async () => { await post('lock', {}); setSession(null, 0); reload() } }, t('status.locked'))
-            : null),
+            : h(Btn, { primary: true, onClick: () => ensureAuth().then(() => reload()).catch(() => {}) }, t('settings.unlockEdit'))),
         error ? h(ErrorLine, { text: error === 'network' ? t('error.network') : error }) : null,
-        !state.unlocked
+        !editable
           ? h('div', { className: 'pwv-card' },
-            h('div', { className: 'pwv-title' }, t('unlock.title')),
-            h('div', { className: 'pwv-sub' }, t('unlock.intro')),
-            h(UnlockForm, { t, onDone: reload }),
-            h(ForceResetCard, { t, onDone: reload }))
-          : !current.token
-            ? h('div', { className: 'pwv-card' },
-              h('div', { className: 'pwv-title' }, t('unlock.title')),
-              h(UnlockForm, { t, onDone: reload }))
-            : null,
-        state.unlocked && current.token
-          ? h('div', null,
-            h('div', { className: 'pwv-card' },
-              h('div', { className: 'pwv-row' },
-                h('span', { className: 'pwv-mono pwv-grow' }, `${t('peers.fingerprint')}: ${state.fingerprint}`),
-                h('span', { className: 'pwv-badge' }, state.listening.active ? `${t('status.connected')} :${state.listening.port}` : t('status.offline'))),
-              state.serverError ? h('div', { className: 'pwv-err' }, state.serverError) : null,
-              h('div', { className: 'pwv-muted' }, `${t('settings.sharedRoot')}: ${state.settings.sharedRoot}`),
-              h('div', { className: 'pwv-muted' }, `${t('files.limit')}: ${formatBytes(state.settings.maxFileBytes)} · ${t('settings.listenPort')}: ${state.listening.port} · ${t('settings.advertiseHost')}: ${state.listening.advertisedHost}`)),
-            h('div', { className: 'pwv-h' }, t('peers.title')),
-            state.peers.length === 0
-              ? h('div', { className: 'pwv-muted' }, t('peers.empty'))
-              : state.peers.map((peer) => h(PeerCard, { key: peer.id, t, peer, onChanged: reload })),
-            h(InviteSection, { t, state, onChanged: refreshAll }),
-            h(SharingSettings, { t, state, onChanged: refreshAll }),
-            h(CrossNetSettings, { t, state, full, onChanged: refreshAll }),
-            h(PasswordSection, { t }),
-            h(AuditList, { t, audit: state.audit }),
-            h(DangerSection, { t, onReset: reload }))
-          : null)
+            h('div', { className: 'pwv-title' }, t('settings.readOnly')),
+            h('div', { className: 'pwv-sub' }, t('settings.readOnly')),
+            h('div', { className: 'pwv-row', style: { marginTop: 8 } },
+              h(Btn, { primary: true, onClick: () => ensureAuth().then(() => reload()).catch(() => {}) }, t('settings.unlockEdit'))))
+          : null,
+        h('div', { className: 'pwv-card' },
+          h('div', { className: 'pwv-row' },
+            h('span', { className: 'pwv-mono pwv-grow' }, `${t('peers.fingerprint')}: ${state.fingerprint}`),
+            h('span', { className: 'pwv-badge' }, state.listening.active ? `${t('status.connected')} :${state.listening.port}` : t('status.offline'))),
+          state.serverError ? h('div', { className: 'pwv-err' }, state.serverError) : null,
+          h('div', { className: 'pwv-muted' }, `${t('settings.sharedRoot')}: ${state.settings.sharedRoot}`),
+          h('div', { className: 'pwv-muted' }, `${t('files.limit')}: ${formatBytes(state.settings.maxFileBytes)} · ${t('settings.listenPort')}: ${state.listening.port} · ${t('settings.advertiseHost')}: ${state.listening.advertisedHost}`)),
+        h('div', { className: 'pwv-h' }, t('peers.title')),
+        state.peers.length === 0
+          ? h('div', { className: 'pwv-muted' }, t('peers.empty'))
+          : state.peers.map((peer) => h(PeerCard, { key: peer.id, t, peer, onChanged: reload, readOnly: !editable })),
+        editable ? h(InviteSection, { t, state, onChanged: refreshAll }) : null,
+        h(SharingSettings, { t, state, onChanged: refreshAll, auth }),
+        h(CrossNetSettings, { t, state, full, onChanged: refreshAll, auth }),
+        h(AccessPolicySettings, { t, state, auth, onChanged: refreshAll }),
+        editable ? h(PasswordSection, { t }) : null,
+        h(AuditList, { t, audit: state.audit }),
+        editable ? h(DangerSection, { t, onReset: reload }) : null,
+        prompt ? h(PasswordPrompt, {
+          t,
+          title: prompt.title,
+          onDone: finishPrompt,
+          onCancel: cancelPrompt,
+        }) : null)
     }
 
     // ------------------------------------------------------------------
