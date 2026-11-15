@@ -124,7 +124,6 @@ A 不需要公网 IP；A 主动向 VPS 建 `ssh -R`，由 VPS 暴露端口给 B�
 1. 在公网 VPS 运行仓库自带的中继：
    ```bash
    node relay.js --port 41338 --token 'choose-a-long-secret'
-   # 或安装后使用 bin：dsh-peerweave-relay --port 41338 --token ...
    ```
    也可以把「中继服务」开在插件里（设置 → 跨公网连接 → 中继服务），适合已有公网主机。
 2. A：设置 → 跨公网连接 → 中继客户端，填 VPS 地址、端口、token。

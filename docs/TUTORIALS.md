@@ -147,7 +147,7 @@ cd dsh-peerweave
 node relay.js --port 41338 --token "$(node -e 'console.log(require("crypto").randomBytes(24).toString("hex"))')"
 ```
 
-或安装后使用 bin：`dsh-peerweave-relay --port 41338 --token ...`。
+使用 `node relay.js --port 41338 --token ...` 启动中继。
 
 放行 VPS TCP 41338。推荐用 systemd：
 

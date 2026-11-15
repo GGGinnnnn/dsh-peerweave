@@ -39,9 +39,6 @@
     "README.md",
     "LICENSE"
   ],
-  "bin": {
-    "dsh-peerweave-relay": "./relay.js"
-  },
   "publishConfig": {
     "access": "public"
   },
