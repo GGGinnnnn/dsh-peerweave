@@ -2366,6 +2366,7 @@ window.__ModuleLoader__.load({
       const afterChange = useCallback((policy) => {
         const next = policy || (state && state.settings && state.settings.unlockPolicy)
         if (next === 'always') setSession(null, 0)
+        else if (session.token) setSession(session.token, Number.MAX_SAFE_INTEGER, 'once')
       }, [state && state.settings && state.settings.unlockPolicy])
 
       const auth = { ensure: ensureAuth, afterChange }

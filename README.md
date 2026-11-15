@@ -2,7 +2,7 @@
 
 **Peerweave** 是一个 DeepSeek Harness（DSH）插件：让两台或多台电脑上的 DSH 通过加密点对点链路互联，并在工作区中显示在线节点、查看对方工作区历史、按三档权限只读访问文件，或与对方的 DSH 对话。
 
-插件名 `Peerweave`，包名 `dsh-peerweave`。2026-11 查询 npm registry，`peerweave` 与 `dsh-peerweave` 均未被占用，未发现同名插件。当前版本 **1.3.1**。
+插件名 `Peerweave`，包名 `dsh-peerweave`。2026-11 查询 npm registry，`peerweave` 与 `dsh-peerweave` 均未被占用，未发现同名插件。当前版本 **1.3.2**。
 
 > 每种连接方式的完整分步教程（含 VPS、防火墙、systemd、故障排查）见 **[docs/TUTORIALS.md](docs/TUTORIALS.md)**；插件 设置 → Peerweave → 跨公网连接 里也内置了精简版。
 
@@ -39,7 +39,7 @@ git clone https://github.com/GGGinnnnn/dsh-peerweave.git
 
 然后在 DSH 中把该目录作为本地 bundle 安装（Plugin Manager → 安装本地 bundle，或使用 `plugin_manager` 的 `install_bundle`，`target` 指向仓库目录）。安装会写入当前配置档的 `package.json` 与 bundle 列表。
 
-> 从 GitHub 安装时请固定版本：`plugin_manager install_bundle github:GGGinnnnn/dsh-peerweave#v1.3.1`。无版本号的 `github:GGGinnnnn/dsh-peerweave` 可能被 profile lockfile 解析到旧的 1.2.0 Client。
+> 从 GitHub 安装时请固定版本：`plugin_manager install_bundle github:GGGinnnnn/dsh-peerweave#v1.3.2`。无版本号的 `github:GGGinnnnn/dsh-peerweave` 可能被 profile lockfile 解析到旧的 1.2.0 Client。
 
 安装后：
 
@@ -54,7 +54,7 @@ git clone https://github.com/GGGinnnnn/dsh-peerweave.git
 >
 > 1.2.1 的修复不改变数据或权限：安装后先确认 `设置 → Peerweave` 和左侧底部 Peerweave 入口是否出现；若仍没有，打开 DevTools Console 把第一条 `[peerweave] ... registration failed` / `slot entry crashed` 报错发出来。
 >
-> **重启后插件有时消失？** 先检查 profile 的 `node_modules/dsh-peerweave/package.json` 版本是否为 **1.3.1**，以及 `client.js` 是否包含 `ctx.slots.inject`。如果仍是 1.2.0，说明 GitHub 依赖被 lockfile 固定到了旧提交；把依赖改成 `github:GGGinnnnn/dsh-peerweave#v1.3.1` 后重新安装并重启。1.2.0 使用直接的 `ctx.slots.register`，在 bundle 被排到 `@deepseek-ai/dsh-web-app` 前面时会四连失败，表现就是“插件启用但界面消失”。
+> **重启后插件有时消失？** 先检查 profile 的 `node_modules/dsh-peerweave/package.json` 版本是否为 **1.3.2**，以及 `client.js` 是否包含 `ctx.slots.inject`。如果仍是 1.2.0，说明 GitHub 依赖被 lockfile 固定到了旧提交；把依赖改成 `github:GGGinnnnn/dsh-peerweave#v1.3.2` 后重新安装并重启。1.2.0 使用直接的 `ctx.slots.register`，在 bundle 被排到 `@deepseek-ai/dsh-web-app` 前面时会四连失败，表现就是“插件启用但界面消失”。
 
 > 忘记密码时：打开 设置 → Peerweave 的锁定页，在密码输入框下方使用 **「强制清除 Peerweave…」**。点击后进入二级确认，必须等满 10 秒才能确认；确认后插件恢复到刚安装、尚未设置密码的状态，身份密钥、密码、全部节点和所有设置都会被删除。也可以退出 DSH 后手动删除 `%DSH_HOME%\peerweave\<配置档>\state.json`。已知密码时可在设置页使用「清空一切」。
 
